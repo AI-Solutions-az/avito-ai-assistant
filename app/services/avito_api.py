@@ -41,9 +41,10 @@ def send_message(user_id: int, chat_id: str, text: str):
     }
 
     payload = {
-        "content": {
+        "message": {
             "text": text
-        }
+        },
+        "type": "text"
     }
 
     response = requests.post(url, json=payload, headers=headers)
