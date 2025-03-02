@@ -1,9 +1,8 @@
 from pydantic import BaseModel
-from typing import Optional
 
 # Модели для обработки данных
 class MessageContent(BaseModel):
-    text: Optional[str] = None
+    text: str
 
 class Value(BaseModel):
     id: str
@@ -14,7 +13,7 @@ class Value(BaseModel):
     type: str
     chat_type: str
     content: MessageContent
-    item_id: Optional[int] = None
+    item_id: int
     published_at: str
 
 class Payload(BaseModel):
