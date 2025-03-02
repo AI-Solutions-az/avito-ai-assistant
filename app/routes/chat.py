@@ -10,7 +10,7 @@ async def chat(message: WebhookRequest):
     # Генерация ответа на сообщение пользователя
     response = process_message(message.payload.value.author_id, message.payload.value.content.text)
     print(response)
-    print(message.payload.value.author_id, message.payload.value.chat_id)
+    print("Автор:", message.payload.value.author_id, "Получатель:", message.payload.value.user_id, message.payload.value.chat_id)
     # Отправка сгенерированного сообщения
     send_message(message.payload.value.author_id, message.payload.value.chat_id, response)
     return {"response": response}
