@@ -1,3 +1,5 @@
+import time
+
 from fastapi import APIRouter
 from app.models.schemas import WebhookRequest
 from app.services.avito_api import send_message
@@ -9,6 +11,7 @@ router = APIRouter()
 async def chat(message: WebhookRequest):
     # Генерация ответа на сообщение пользователя
     if message.payload.value.author_id != 75107414:
+        time.sleep(3) # Таймер, чтобы успело отправиться предыдущее сообщение
         response = process_message(message.payload.value.author_id, message.payload.value.content.text)
         print(response)
         print("Автор:", message.payload.value.author_id, "Получатель:", message.payload.value.user_id, message.payload.value.chat_id)
