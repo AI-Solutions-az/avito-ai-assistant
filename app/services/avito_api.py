@@ -23,7 +23,8 @@ def get_avito_token(client_id: str, client_secret: str):
 
     response = requests.post(url, headers=headers, data=data)
 
-    return response.json()
+    response_json = response.json()
+    return response_json.get("access_token", "")
 
 def send_message(user_id: int, chat_id: str, text: str):
     url = f"https://api.avito.ru/messenger/v3/accounts/{user_id}/chats/{chat_id}/messages"
