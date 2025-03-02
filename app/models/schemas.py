@@ -1,10 +1,12 @@
 from pydantic import BaseModel
+from typing import Optional
 
-# Модели для обработки данных
+# Модель для содержимого сообщения (content)
 class MessageContent(BaseModel):
     text: str
 
-class Value(BaseModel):
+# Модель для значения сообщения (value)
+class MessageValue(BaseModel):
     id: str
     chat_id: str
     user_id: int
@@ -16,10 +18,12 @@ class Value(BaseModel):
     item_id: int
     published_at: str
 
+# Модель для полезной нагрузки (payload)
 class Payload(BaseModel):
     type: str
-    value: Value
+    value: MessageValue
 
+# Основная модель для всего запроса
 class WebhookRequest(BaseModel):
     id: str
     version: str
