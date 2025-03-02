@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Генерация ответа на сообщение клиента
 def process_message(user_id: str, message: str):
     history = get_history(user_id)
     history.append({"role": "user", "content": message})
@@ -18,6 +19,5 @@ def process_message(user_id: str, message: str):
     # Сохранение истории переписки
     save_message(user_id, "user", message)
     save_message(user_id, "assistant", reply)
-    # Отправка ответа клиенту
 
     return reply

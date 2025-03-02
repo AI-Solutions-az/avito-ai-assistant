@@ -28,6 +28,7 @@ def get_avito_token(client_id: str, client_secret: str):
 def send_message(user_id: int, chat_id: str, text: str):
     url = f"https://api.avito.ru/messenger/v3/accounts/{user_id}/chats/{chat_id}/messages"
     access_token = get_avito_token(CLIENT_ID, CLIENT_SECRET)
+    print(access_token)
 
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -42,5 +43,6 @@ def send_message(user_id: int, chat_id: str, text: str):
     }
 
     response = requests.post(url, json=payload, headers=headers)
+    print(response)
 
     return response.json()

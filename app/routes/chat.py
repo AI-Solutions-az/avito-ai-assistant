@@ -7,6 +7,9 @@ router = APIRouter()
 
 @router.post("/chat/")
 async def chat(message: WebhookRequest):
+    # Генерация ответа на сообщение пользователя
     response = process_message(message.payload.value.author_id, message.payload.value.content.text)
-    send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
+    print(response)
+    # Отправка сгенерированного сообщения
+    send_message(message.payload.value.author_id, message.payload.value.chat_id, response)
     return {"response": response}
