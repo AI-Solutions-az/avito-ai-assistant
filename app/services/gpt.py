@@ -15,7 +15,9 @@ def process_message(user_id: str, message: str):
 
     reply = response.choices[0].message.content
 
+    # Сохранение истории переписки
     save_message(user_id, "user", message)
     save_message(user_id, "assistant", reply)
+    # Отправка ответа клиенту
 
     return reply
