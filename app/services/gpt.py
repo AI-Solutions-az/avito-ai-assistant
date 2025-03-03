@@ -10,7 +10,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def process_message(user_id: str, message: str):
     history = get_history(user_id)
     history.append({"role": "user", "content": message})
-    print(history)
+
     response = client.chat.completions.create(model="gpt-4",
     messages=[{"role": "user", "content": message}])
 
