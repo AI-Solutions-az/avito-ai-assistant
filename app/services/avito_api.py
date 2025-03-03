@@ -1,6 +1,7 @@
 import requests
 import os
 from dotenv import load_dotenv
+import asyncio
 
 load_dotenv()
 
@@ -27,8 +28,10 @@ def get_avito_token(client_id: str, client_secret: str) -> str:
     return response.json().get("access_token", "")
 
 
-def send_message(user_id: int, chat_id: str, text: str):
+async def send_message(user_id: int, chat_id: str, text: str):
     """Отправка сообщения пользователю в Avito"""
+    await asyncio.sleep(5)
+
     url = f"https://api.avito.ru/messenger/v1/accounts/{user_id}/chats/{chat_id}/messages"
     access_token = get_avito_token(CLIENT_ID, CLIENT_SECRET)
 
