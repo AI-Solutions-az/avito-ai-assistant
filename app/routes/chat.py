@@ -14,13 +14,13 @@ def process_and_send_response(message: WebhookRequest):
     print(response)
     print('2. Отправка сгенерированного сообщения')
     send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
-    print("3. Получение информации об объявлении")
-    ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
-    print(ad_url)
+    # print("3. Получение информации об объявлении, объявление должно принадлежать владельцу")
+    # ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
+    # print(ad_url)
     print("4. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
     if re.search('оператор', response, re.IGNORECASE):
         print("Перевод сообщения на оператора!")
-        send_alert(f"Требуется внимание менеджера:\n{ad_url}")
+        send_alert(f"Требуется внимание менеджера:\n ссылка")
         # Отправка объявления в чат
     # Отключение бота в случае, если по чату была отправлена ссылка
 
