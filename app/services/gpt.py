@@ -12,7 +12,7 @@ def process_message(user_id: str, message: str):
     history.append({"role": "user", "content": message})
 
     response = client.chat.completions.create(model="gpt-4",
-    messages=message)
+    message=message)
 
     reply = response.choices[0].message.content
 
