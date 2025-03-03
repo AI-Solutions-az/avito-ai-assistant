@@ -15,5 +15,5 @@ async def chat(message: WebhookRequest):
     response = process_message(message.payload.value.author_id, message.payload.value.content.text)
     print(response)
     # Отправка сгенерированного сообщения
-    # send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
+    send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
     return None # {"response": response}
