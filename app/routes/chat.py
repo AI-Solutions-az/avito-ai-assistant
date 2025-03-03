@@ -13,7 +13,7 @@ async def chat(message: WebhookRequest):
     print(message.payload.value.author_id)
     time.sleep(3)  # Таймер, чтобы успело отправиться предыдущее сообщение
     # Генерация ответа на сообщение пользователя
-    if message.payload.value.author_id != 75107414:
+    if message.payload.value.author_id != '75107414':
         response = process_message(message.payload.value.author_id, message.payload.value.content.text)
         # Отправка сгенерированного сообщения
         send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
