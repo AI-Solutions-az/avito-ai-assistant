@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 @router.post("/chat")
-async def chat(message: WebhookRequest):
+def chat(message: WebhookRequest):
     print('ПОЛУЧЕН НОВЫЙ ЗАПРОС ОТ АВИТО')
     send_message(message.payload.value.user_id, message.payload.value.chat_id, "Тестовый ответ")
 

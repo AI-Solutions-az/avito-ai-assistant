@@ -1,6 +1,7 @@
 import requests
 import os
 from dotenv import load_dotenv
+from fastapi.responses import JSONResponse
 
 load_dotenv()
 
@@ -54,4 +55,4 @@ def send_message(user_id: int, chat_id: str, text: str):
         print(f"Ошибка при отправке сообщения: {response.status_code}, {response.text}")
         return None
 
-    return None
+    return JSONResponse(content={"response": "ok"}, status_code=200)
