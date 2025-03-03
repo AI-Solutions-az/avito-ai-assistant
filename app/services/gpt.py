@@ -19,7 +19,7 @@ def process_message(user_id: str, message: str):
     messages = history + [instructions]  # Создаём новый список с дополнительным элементом
 
     print("1.1. Отправка запрос в ChatGPT")
-    response = client.chat.completions.create(model="gpt-4",
+    response = client.chat.completions.create(model="o1-mini",
     messages=messages)
 
     reply = response.choices[0].message.content
