@@ -55,3 +55,19 @@ def send_message(user_id: int, chat_id: str, text: str):
         return None
 
     return None
+
+def get_ad(user_id:int, item_id:int):
+    """Получение информации об объявлении"""
+    access_token = get_avito_token(CLIENT_ID, CLIENT_SECRET)
+
+    if not access_token:
+        raise Exception("Не удалось получить токен Avito API")
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    url = f"https://api.avito.ru/core/v1/accounts/{user_id}/items/{item_id}/"
+    response = requests.get(url, headers=headers)
+
+    return response.json().get("url","")
