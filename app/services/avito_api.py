@@ -1,7 +1,6 @@
 import requests
 import os
 from dotenv import load_dotenv
-import asyncio
 
 load_dotenv()
 
@@ -28,11 +27,10 @@ def get_avito_token(client_id: str, client_secret: str) -> str:
     return response.json().get("access_token", "")
 
 
-async def send_message(user_id: int, chat_id: str, text: str):
+def send_message(user_id: int, chat_id: str, text: str):
     """Отправка сообщения пользователю в Avito"""
-    await asyncio.sleep(5)
-
     url = f"https://api.avito.ru/messenger/v1/accounts/{user_id}/chats/{chat_id}/messages"
+    print("2.1. Запрос аксесс токена")
     access_token = get_avito_token(CLIENT_ID, CLIENT_SECRET)
 
     if not access_token:
@@ -49,11 +47,11 @@ async def send_message(user_id: int, chat_id: str, text: str):
         },
         "type": "text"
     }
-
+    print("2.2. Отправка сообщения")
     response = requests.post(url, json=payload, headers=headers)
 
     if response.status_code != 200:
         print(f"Ошибка при отправке сообщения: {response.status_code}, {response.text}")
         return None
 
-    return response.json()
+    return None

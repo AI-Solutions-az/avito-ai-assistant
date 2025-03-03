@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter
 from app.models.schemas import WebhookRequest
 from app.services.avito_api import send_message
 from app.services.gpt import process_message
@@ -6,19 +6,15 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-
 @router.post("/chat")
-async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
+async def chat(message: WebhookRequest):
     # Автор последнего сообщения
-    if message.payload.value.author_id == int(75107414):
-        return None
+    if message.payload.value.author_id ==int(75107414):
+        print('0. Вебхук на сообщение от самого себя')
+        return JSONResponse(content={"response": "ok"}, status_code=200)
     else:
-        # Генерация ответа на сообщение пользователя
+        print('1. Генерация ответа на сообщение пользователя')
         response = process_message(message.payload.value.author_id, message.payload.value.content.text)
-
-        # Добавляем задачу на выполнение в фоне
-        background_tasks.add_task(send_message, message.payload.value.user_id, message.payload.value.chat_id,
-                                  response)
-
-        # Возвращаем ответ с кодом 200
-        return JSONResponse(content={"response": response}, status_code=200)
+        print('2. Отправка сгенерированного сообщения')
+        send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
+        return JSONResponse(content={"response": "ok"}, status_code=200)

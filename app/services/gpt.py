@@ -11,12 +11,14 @@ def process_message(user_id: str, message: str):
     history = get_history(user_id)
     history.append({"role": "user", "content": message})
 
+    print("1.1. Отправка запрос в ChatGPT")
     response = client.chat.completions.create(model="gpt-4",
     messages=[{"role": "user", "content": message}])
 
     reply = response.choices[0].message.content
 
-    # Сохранение истории переписки
+    print("1.2. Сохранение истории в редис")
+
     save_message(user_id, "user", message)
     save_message(user_id, "assistant", reply)
 
