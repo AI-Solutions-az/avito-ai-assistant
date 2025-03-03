@@ -9,6 +9,8 @@ router = APIRouter()
 @router.post("/chat")
 async def chat(message: WebhookRequest):
     print('ПОЛУЧЕН НОВЫЙ ЗАПРОС ОТ АВИТО')
+    send_message(message.payload.value.user_id, message.payload.value.chat_id, "Тестовый ответ")
+
     # Автор последнего сообщения
     # if message.payload.value.author_id ==int(75107414):
     #     print('0. Вебхук на сообщение от самого себя')
