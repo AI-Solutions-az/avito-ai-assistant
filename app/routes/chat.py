@@ -21,11 +21,11 @@ def process_and_send_response(message: WebhookRequest):
     print("4. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
     if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
             re.search('оператор', message.payload.value.content.text, re.IGNORECASE)):
-        print("Перевод сообщения на оператора!")
+        print("4.1. Перевод сообщения на оператора!")
         # Отправка объявления в чат
-        send_alert(f"Требуется внимание менеджера:\n ссылка")
+        send_alert(f"4.2. Требуется внимание менеджера:\n ссылка")
         # Отключение бота в случае, если по чату была отправлена ссылка
-        print("Добавление чата в список исключений")
+        print("4.3. Добавление чата в список исключений")
         add_chat(message.payload.value.chat_id)
 
 @router.post("/chat")
@@ -39,7 +39,7 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     if chat_exists(message.payload.value.chat_id):
         print('0. Ассистент отключен в чате')
         return JSONResponse(content={"ok": True}, status_code=200)
-    
+
     # Добавляем выполнение кода в фоне
     background_tasks.add_task(process_and_send_response, message)
 
