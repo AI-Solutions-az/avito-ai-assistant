@@ -12,8 +12,9 @@ def chat(message: WebhookRequest):
     if message.payload.value.author_id ==int(75107414):
         print('0. Вебхук на сообщение от самого себя')
         return JSONResponse(content={"ok":True}, status_code=200)
-    # print('1. Генерация ответа на сообщение пользователя')
-    # response = process_message(message.payload.value.author_id, message.payload.value.content.text)
+    print('1. Генерация ответа на сообщение пользователя')
+    response = process_message(message.payload.value.author_id, message.payload.value.content.text)
+    print(response)
     # print('2. Отправка сгенерированного сообщения')
     # send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
     # return JSONResponse(content={"ok":True}, status_code=200)
