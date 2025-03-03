@@ -17,4 +17,4 @@ def chat(message: WebhookRequest):
     print(response)
     # print('2. Отправка сгенерированного сообщения')
     # send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
-    # return JSONResponse(content={"ok":True}, status_code=200)
+    return JSONResponse(content={"ok":True}, status_code=200)
