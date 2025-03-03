@@ -5,6 +5,7 @@ from app.services.avito_api import send_message, get_ad
 from app.services.gpt import process_message
 import re
 from app.services.telegram_bot import send_alert
+from app.redis_db import add_chat, chat_exists
 router = APIRouter()
 
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
@@ -18,12 +19,14 @@ def process_and_send_response(message: WebhookRequest):
     # ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
     # print(ad_url)
     print("4. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
-    if re.search('оператор', response, re.IGNORECASE):
+    if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
+            re.search('оператор', message.payload.value.content.text, re.IGNORECASE)):
         print("Перевод сообщения на оператора!")
-        send_alert(f"Требуется внимание менеджера:\n ссылка")
         # Отправка объявления в чат
-    # Отключение бота в случае, если по чату была отправлена ссылка
-
+        send_alert(f"Требуется внимание менеджера:\n ссылка")
+        # Отключение бота в случае, если по чату была отправлена ссылка
+        print("Добавление чата в список исключений")
+        add_chat(message.payload.value.chat_id)
 
 @router.post("/chat")
 def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
@@ -33,6 +36,10 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
         print('0. Вебхук на сообщение от самого себя')
         return JSONResponse(content={"ok": True}, status_code=200)
 
+    if chat_exists(message.payload.value.chat_id):
+        print('0. Ассистент отключен в чате')
+        return JSONResponse(content={"ok": True}, status_code=200)
+    
     # Добавляем выполнение кода в фоне
     background_tasks.add_task(process_and_send_response, message)
 
