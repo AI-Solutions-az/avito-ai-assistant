@@ -8,7 +8,7 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 
-def get_avito_token(client_id: str, client_secret: str) -> str:
+async def get_avito_token(client_id: str, client_secret: str) -> str:
     """Получение токена Avito API"""
     url = "https://api.avito.ru/token/"
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -27,10 +27,10 @@ def get_avito_token(client_id: str, client_secret: str) -> str:
     return response.json().get("access_token", "")
 
 
-def send_message(user_id: int, chat_id: str, text: str):
+async def send_message(user_id: int, chat_id: str, text: str):
     """Отправка сообщения пользователю в Avito"""
     url = f"https://api.avito.ru/messenger/v1/accounts/{user_id}/chats/{chat_id}/messages"
-    access_token = get_avito_token(CLIENT_ID, CLIENT_SECRET)
+    access_token = await get_avito_token(CLIENT_ID, CLIENT_SECRET)
 
     if not access_token:
         raise Exception("Не удалось получить токен Avito API")
