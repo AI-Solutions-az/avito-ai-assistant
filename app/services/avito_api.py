@@ -69,5 +69,5 @@ def get_ad(user_id:int, item_id:int):
     }
     url = f"https://api.avito.ru/core/v1/accounts/{user_id}/items/{item_id}/"
     response = requests.get(url, headers=headers)
-
+    print("Ответ на получение ссылки на объявление", response)
     return response.json().get("url","")
