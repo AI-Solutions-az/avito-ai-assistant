@@ -11,7 +11,7 @@ router = APIRouter()
 async def chat(message: WebhookRequest):
     # Автор последнего сообщения
     print("Автор последнего сообщения:", message.payload.value.author_id, "Сообщение:", message.payload.value.content.text)
-    if message.payload.value.author_id == 75107414:
+    if message.payload.value.author_id ==int(75107414):
         return None
     else:
         # Генерация ответа на сообщение пользователя
