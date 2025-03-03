@@ -1,3 +1,4 @@
+import logging
 from openai import OpenAI
 import os
 from app.redis_db import save_message, get_history
@@ -10,22 +11,24 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Инструкция бота
 instructions = {"role": "developer", "content": f"{prompt}+{warehouse}"}
 
+# Настройка логирования
+logger = logging.getLogger("uvicorn")
+
 # Генерация ответа на сообщение клиента
 def process_message(user_id: str, message: str):
+    logger.info(f"Получено сообщение от пользователя {user_id}: {message}")
 
     history = get_history(user_id)
     history.append({"role": "user", "content": message})
 
     messages = history + [instructions]  # Создаём новый список с дополнительным элементом
 
-    print("1.1. Отправка запрос в ChatGPT")
-    response = client.chat.completions.create(model="gpt-4o-mini",
-    messages=messages)
+    logger.info("1.1. Отправка запроса в ChatGPT")
+    response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
 
     reply = response.choices[0].message.content
 
-    print("1.2. Сохранение истории в редис")
-
+    logger.info("1.2. Сохранение истории в редис")
     save_message(user_id, "user", message)
     save_message(user_id, "assistant", reply)
 
