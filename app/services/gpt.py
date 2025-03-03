@@ -8,7 +8,7 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Инструкция бота
-instructions = {"role": "system", "content": f"{prompt}+{warehouse}"}
+instructions = {"role": "developer", "content": f"{prompt}+{warehouse}"}
 
 # Генерация ответа на сообщение клиента
 def process_message(user_id: str, message: str):
