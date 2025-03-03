@@ -6,6 +6,7 @@ from app.services.gpt import process_message
 
 router = APIRouter()
 
+# Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
     print('1. Генерация ответа на сообщение пользователя')
     response = process_message(message.payload.value.author_id, message.payload.value.content.text)

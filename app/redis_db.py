@@ -15,5 +15,7 @@ def get_history(user_id):
 # Сохранение сообщения в историю
 def save_message(user_id, role, message):
     history = get_history(user_id)
+    if len(history) >= 20:  # Ограничение на 20 сообщений
+        history.pop(0)
     history.append({"role": role, "content": message})
     r.set(user_id, json.dumps(history), ex=86400)  # Храним 24 часа
