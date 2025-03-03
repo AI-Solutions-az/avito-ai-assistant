@@ -17,10 +17,9 @@ def process_and_send_response(message: WebhookRequest):
     send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
     # print("3. Получение информации об объявлении, объявление должно принадлежать владельцу")
     # ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
-    # print(ad_url)
     print("4. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
     if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
-            re.search('оператор', message.payload.value.content.text, re.IGNORECASE)):
+            re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
         print("4.1. Перевод сообщения на оператора!")
         # Отправка объявления в чат
         send_alert(f"4.2. Требуется внимание менеджера:\n ссылка")

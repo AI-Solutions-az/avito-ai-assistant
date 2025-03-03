@@ -24,13 +24,6 @@ def save_message(user_id, role, message):
 def add_chat(chat_id):
     r.setex(f"chat:{chat_id}", 86400, "1")
 
-# Получение всех активных чатов
-def get_chats():
-    return [key.split(":")[1] for key in r.keys("chat:*")]
-
-# Удаление чата из списка
-def remove_chat(chat_id):
-    r.delete(f"chat:{chat_id}")
-
+# Проверка наличия чата в списке
 def chat_exists(chat_id):
     return r.exists(f"chat:{chat_id}") > 0
