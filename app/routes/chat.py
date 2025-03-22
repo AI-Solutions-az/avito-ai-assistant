@@ -15,21 +15,24 @@ router = APIRouter()
 
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
-    logger.info('1. Генерация ответа на сообщение пользователя')
-    response = process_message(message.payload.value.author_id, message.payload.value.content.text)
-    logger.info(f"Ответ: {response}")
-    logger.info('2. Отправка сгенерированного сообщения')
-    send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
-    # print("3. Получение информации об объявлении, объявление должно принадлежать владельцу")
-    # ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
-    logger.info("4. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
-    if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
-            re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
-        logger.info("4.1. Перевод сообщения на оператора!")
-        send_alert(f"Требуется внимание менеджера:\n ссылка")
+    print("1. Получение информации об объявлении, объявление должно принадлежать владельцу")
+    ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
+    logger.info('2. Генерация ответа на сообщение пользователя')
+    response = process_message(message.payload.value.author_id, message.payload.value.content.text, ad_url)
+    if response:
+        logger.info(f"Ответ: {response}")
+        logger.info('3. Отправка сгенерированного сообщения')
+        send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
+        logger.info("4. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
+        if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
+                re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
+            logger.info("4.1. Перевод сообщения на оператора!")
+            send_alert(f"Требуется внимание менеджера:\n ссылка")
 
-        logger.info("4.2. Добавление чата в список исключений")
-        add_chat(message.payload.value.chat_id)
+            logger.info("4.2. Добавление чата в список исключений")
+            add_chat(message.payload.value.chat_id)
+    else:
+        return None
 
 @router.post("/chat")
 def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
