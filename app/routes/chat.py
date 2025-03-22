@@ -15,7 +15,7 @@ router = APIRouter()
 
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
-    print("1. Получение информации об объявлении, объявление должно принадлежать владельцу")
+    logger.info("1. Получение информации об объявлении, объявление должно принадлежать владельцу")
     ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
     logger.info('2. Генерация ответа на сообщение пользователя')
     response = process_message(message.payload.value.author_id, message.payload.value.content.text, ad_url)
@@ -38,7 +38,7 @@ def process_and_send_response(message: WebhookRequest):
 def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     logger.info('ПОЛУЧЕН НОВЫЙ ЗАПРОС ОТ АВИТО')
     print(message)
-    author_id = int(75107414)
+    author_id = int(296370706)
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
 
