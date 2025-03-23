@@ -18,7 +18,8 @@ def process_and_send_response(message: WebhookRequest):
     logger.info("1. Получение информации об объявлении, объявление должно принадлежать владельцу")
     ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
     logger.info('2. Генерация ответа на сообщение пользователя')
-    response = process_message(message.payload.value.author_id, message.payload.value.content.text, ad_url)
+    response = process_message(message.payload.value.author_id, message.payload.value.chat_id,
+                               message.payload.value.content.text, ad_url)
     if response:
         logger.info(f"Ответ: {response}")
         logger.info('3. Отправка сгенерированного сообщения')

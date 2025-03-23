@@ -12,29 +12,29 @@ load_dotenv()
 r = redis.Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), decode_responses=True)
 
 
-# Получение истории сообщений
-def get_history(user_id):
-    logger.info(f"Получение истории сообщений для пользователя {user_id}")
-    history = r.get(f"history:{user_id}")
+# Получение истории сообщений по user_id и chat_id
+def get_history(user_id, chat_id):
+    logger.info(f"Получение истории сообщений для пользователя {user_id}, чат {chat_id}")
+    history = r.get(f"history:{user_id}:{chat_id}")
     if history:
-        logger.info(f"История для пользователя {user_id} успешно получена")
+        logger.info(f"История для пользователя {user_id}, чат {chat_id} успешно получена")
         return json.loads(history)
     else:
-        logger.info(f"История для пользователя {user_id} не найдена")
+        logger.info(f"История для пользователя {user_id}, чат {chat_id} не найдена")
         return []
 
 
 # Сохранение сообщения в историю (максимум 20 сообщений)
-def save_message(user_id, role, message):
-    logger.info(f"Сохранение сообщения для пользователя {user_id}, роль: {role}")
-    history = get_history(user_id)
+def save_message(user_id, chat_id, role, message):
+    logger.info(f"Сохранение сообщения для пользователя {user_id}, чат {chat_id}, роль: {role}")
+    history = get_history(user_id, chat_id)
     if len(history) >= 20:
-        logger.info(f"История пользователя {user_id} превышает 20 сообщений, удаление старых")
+        logger.info(f"История пользователя {user_id}, чат {chat_id} превышает 20 сообщений, удаление старых")
         history.pop(0)
     history.append({"role": role, "content": message})
 
-    r.setex(f"history:{user_id}", 86400, json.dumps(history))  # Храним 24 часа
-    logger.info(f"Сообщение для пользователя {user_id} сохранено в историю")
+    r.setex(f"history:{user_id}:{chat_id}", 86400, json.dumps(history))  # Храним 24 часа
+    logger.info(f"Сообщение для пользователя {user_id}, чат {chat_id} сохранено в историю")
 
 
 # Добавление чата в список (каждый chat_id хранится 24 часа)

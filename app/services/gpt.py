@@ -5,7 +5,6 @@ from app.redis_db import save_message, get_history
 from dotenv import load_dotenv
 from app.config import prompt
 from app.services.google_sheets_api import fetch_google_sheet_stock, get_knowledge_base
-from app.services.telegram_bot import send_alert
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -14,7 +13,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 logger = logging.getLogger("uvicorn")
 
 # Генерация ответа на сообщение клиента
-def process_message(user_id: str, message: str, ad_url):
+def process_message(user_id: str, chat_id:str, message: str, ad_url):
     logger.info(f"2.1. Получено сообщение от пользователя {user_id}: {message}")
 
     logger.info("2.2. Получение информации по объявлению из базы знаний")
@@ -28,7 +27,7 @@ def process_message(user_id: str, message: str, ad_url):
     logger.info("2.3. Получение информации по кейсам из базы знаний")
     knowledge_base = get_knowledge_base()
     # Получение истории сообщений
-    history = get_history(user_id)
+    history = get_history(user_id, chat_id)
     history.append({"role": "user", "content": message})
     # Инструкция бота
     instructions = {"role": "developer", "content": f"{prompt}\n"
@@ -43,7 +42,7 @@ def process_message(user_id: str, message: str, ad_url):
     reply = response.choices[0].message.content
 
     logger.info("2.5. Сохранение истории в редис")
-    save_message(user_id, "user", message)
-    save_message(user_id, "assistant", reply)
+    save_message(user_id, chat_id, "user", message)
+    save_message(user_id, chat_id, "assistant", reply)
 
     return reply
