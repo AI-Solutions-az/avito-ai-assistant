@@ -34,7 +34,7 @@ def process_message(user_id: str, chat_id:str, message: str, ad_url):
                                                     f"# INFORMATION: {stock}"
                                                     f"# COMMON QUESTIONS: {knowledge_base}"}
 
-    messages = history + [instructions]  # Создаём новый список с дополнительным элементом
+    messages = [instructions] + "History of chat, where assistant is your previous messages:"+history # Создаём новый список с дополнительным элементом
 
     logger.info("2.4. Отправка запроса в ChatGPT")
     response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
@@ -43,6 +43,6 @@ def process_message(user_id: str, chat_id:str, message: str, ad_url):
 
     logger.info("2.5. Сохранение истории в редис")
     save_message(user_id, chat_id, "user", message)
-    save_message(user_id, chat_id, "assistant", reply)
+    save_message(user_id, chat_id, "developer", reply)
 
     return reply
