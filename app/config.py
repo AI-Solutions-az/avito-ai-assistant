@@ -9,6 +9,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
 AUTHOR_ID = os.getenv("AUTHOR_ID")
+CLIENT_NUMBER = os.getenv("CLIENT_NUMBER")
 
 prompt = '''
 # GENERAL INFORMATION

@@ -7,7 +7,7 @@ import re
 from app.services.telegram_bot import send_alert
 from app.redis_db import add_chat, chat_exists
 import logging
-from app.config import AUTHOR_ID
+from app.config import AUTHOR_ID, CLIENT_NUMBER
 
 # Используем уже существующий логгер
 logger = logging.getLogger("uvicorn")
@@ -17,7 +17,7 @@ router = APIRouter()
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
     logger.info("1. Получение информации об объявлении, объявление должно принадлежать владельцу")
-    ad_url = get_ad(AUTHOR_ID, message.payload.value.item_id)
+    ad_url = get_ad(CLIENT_NUMBER, message.payload.value.item_id)
     logger.info('2. Генерация ответа на сообщение пользователя')
     response = process_message(message.payload.value.author_id, message.payload.value.content.text, ad_url)
     if response:
