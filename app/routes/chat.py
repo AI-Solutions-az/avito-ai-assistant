@@ -50,7 +50,8 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
         if (re.search('оператор', message_text, re.IGNORECASE) or
                 re.search('менеджер', message_text, re.IGNORECASE)):
             logger.info("4.3. Переключение на оператора самим оператором или чат-ботом")
-            send_alert(f"Требуется внимание менеджера:\n ссылка")
+            ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
+            send_alert(f"Требуется внимание менеджера:\n {ad_url}")
             logger.info("4.4. Добавление чата в список исключений")
             add_chat(chat_id)
         else:
