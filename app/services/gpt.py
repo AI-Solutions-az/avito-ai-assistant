@@ -23,7 +23,7 @@ def process_message(user_id: str, message: str, ad_url):
     stock = fetch_google_sheet_stock(ad_url)
     # Выключаем бота, если не нашли объявление в базе знаний и отправляем уведомление об этом
     if not stock:
-        send_alert(f'Невозможно найти объявление {ad_url} в базе знаний')
+        # send_alert(f'Невозможно найти объявление {ad_url} в базе знаний')
         return None
     # Запрос базы знаний
     knowledge_base = get_knowledge_base()
