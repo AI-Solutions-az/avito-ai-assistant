@@ -38,8 +38,7 @@ def process_and_send_response(message: WebhookRequest):
 @router.post("/chat")
 def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     logger.info('ПОЛУЧЕН НОВЫЙ ЗАПРОС ОТ АВИТО')
-    print(message)
-    author_id = int(296370706)
+    logger.info(message)
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
 
@@ -47,7 +46,7 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
         logger.info('0. Ассистент отключен в чате')
         return JSONResponse(content={"ok": True}, status_code=200)
 
-    if message.payload.value.author_id == author_id:
+    if message.payload.value.author_id == AUTHOR_ID:
         if (re.search('оператор', message_text, re.IGNORECASE) or
                 re.search('менеджер', message_text, re.IGNORECASE)):
             logger.info("4.3. Переключение на оператора самим оператором или чат-ботом")
