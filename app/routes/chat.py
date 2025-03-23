@@ -28,7 +28,7 @@ def process_and_send_response(message: WebhookRequest):
         if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
                 re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
             logger.info("4.1. Перевод сообщения на оператора!")
-            send_alert(f"Требуется внимание менеджера:\n ссылка")
+            send_alert(f"Требуется внимание менеджера:\n {ad_url}")
 
             logger.info("4.2. Добавление чата в список исключений")
             add_chat(message.payload.value.chat_id)
