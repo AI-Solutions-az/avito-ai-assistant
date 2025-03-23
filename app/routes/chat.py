@@ -7,7 +7,7 @@ import re
 from app.services.telegram_bot import send_alert
 from app.redis_db import add_chat, chat_exists
 import logging
-from app.config import AUTHOR_ID, CLIENT_NUMBER
+from app.config import AUTHOR_ID
 
 # Используем уже существующий логгер
 logger = logging.getLogger("uvicorn")
@@ -17,7 +17,7 @@ router = APIRouter()
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
     logger.info("1. Получение информации об объявлении, объявление должно принадлежать владельцу")
-    ad_url = get_ad(CLIENT_NUMBER, message.payload.value.item_id)
+    ad_url = get_ad(AUTHOR_ID, message.payload.value.item_id)
     logger.info('2. Генерация ответа на сообщение пользователя')
     response = process_message(message.payload.value.author_id, message.payload.value.content.text, ad_url)
     if response:
@@ -46,7 +46,7 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
         logger.info('0. Ассистент отключен в чате')
         return JSONResponse(content={"ok": True}, status_code=200)
 
-    if message.payload.value.author_id == AUTHOR_ID:
+    if message.payload.value.author_id == int(AUTHOR_ID):
         if (re.search('оператор', message_text, re.IGNORECASE) or
                 re.search('менеджер', message_text, re.IGNORECASE)):
             logger.info("4.3. Переключение на оператора самим оператором или чат-ботом")
