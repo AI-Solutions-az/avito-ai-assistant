@@ -23,7 +23,7 @@ def process_and_send_response(message: WebhookRequest):
     if response:
         logger.info(f"Ответ: {response}")
         logger.info('3. Отправка сгенерированного сообщения')
-        send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
+        send_message(AUTHOR_ID, message.payload.value.chat_id, response)
         logger.info("4. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
         if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
                 re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
