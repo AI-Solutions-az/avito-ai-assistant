@@ -1,13 +1,7 @@
 import logging
 import requests
-import os
-from dotenv import load_dotenv
 from functools import lru_cache
-
-load_dotenv()
-
-CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+from app.config import CLIENT_ID, CLIENT_SECRET
 
 # Настройка логирования
 logger = logging.getLogger("uvicorn")
