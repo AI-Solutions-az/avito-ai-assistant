@@ -2,7 +2,7 @@ import requests
 import json
 from app.config import SOURCE_TOKEN, INGESTING_HOST
 
-def send_log(message: str, nested: dict = None):
+def send_log(message: str):
     """
     Отправляет лог-сообщение на указанный сервер логирования.
 
@@ -19,8 +19,6 @@ def send_log(message: str, nested: dict = None):
     data = {
         "message": message,
     }
-    if nested:
-        data["nested"] = nested
 
     try:
         response = requests.post(url, headers=headers, data=json.dumps(data))
