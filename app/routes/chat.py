@@ -15,7 +15,7 @@ router = APIRouter()
 
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
-    logger.info("1. Получение информации об объявлении, объявление должно принадлежать владельцу")
+    logger.info("1. Получение информации о пользователе")
     user_name, user_url = get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
     logger.info("2. Получение информации об объявлении, объявление должно принадлежать владельцу")
     ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
@@ -27,15 +27,15 @@ def process_and_send_response(message: WebhookRequest):
         logger.info('4. Отправка сгенерированного сообщения')
         send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
         logger.info("5. Отправка сообщения в телеграм канал")
-        send_alert(f"Клиент:{message.payload.value.content.text}\n"
-                   f"Бот:{response}")
+        send_alert(f"💁‍♂️ Клиент: {message.payload.value.content.text}\n"
+                   f"🤖 Бот: {response}")
         logger.info("5. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
         if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
                 re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
             logger.info("5.1. Перевод сообщения на оператора!")
-            send_alert(f"Требуется внимание менеджера:"
+            send_alert(f"Требуется внимание менеджера:\n"
                        f"Объявление: {ad_url}\n"
-                       f"Пользователь {user_name}: {user_url}")
+                       f"Клиент {user_name}: {user_url}")
             logger.info("5.2. Добавление чата в список исключений")
             add_chat(message.payload.value.chat_id)
     else:
@@ -58,9 +58,9 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
             logger.info("4.3. Переключение на оператора самим оператором или чат-ботом")
             ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
             user_name, user_url = get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
-            send_alert(f"Требуется внимание менеджера:"
+            send_alert(f"Требуется внимание менеджера:\n"
                        f"Объявление: {ad_url}\n"
-                       f"Пользователь {user_name}: {user_url}")
+                       f"Клиент {user_name}: {user_url}")
             logger.info("4.4. Добавление чата в список исключений")
             add_chat(chat_id)
         else:
