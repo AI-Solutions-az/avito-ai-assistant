@@ -29,7 +29,7 @@ def process_and_send_response(message: WebhookRequest):
         logger.info("5. Отправка сообщения в телеграм канал")
         send_alert(f"💁‍♂️ {user_name}: {message.payload.value.content.text}\n"
                    f"🤖 Бот: {response}"
-                   f"Диалог: {message.payload.value.chat_id}")
+                   f"Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
         # 5. Отправка уведомления в телеграм, если есть слово менеджер или оператор
         if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
                 re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
