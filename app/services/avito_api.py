@@ -79,25 +79,15 @@ def get_user_info(user_id, chat_id):
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         user_info = response.json()
-        logger.info(f"Информация об объявлении получена: {user_info}")
+        logger.info(f"Информация об пользователе получена: {user_info}")
     except requests.exceptions.RequestException as e:
         logger.error(f"Ошибка при получении информации о пользователе: {e}")
         return None, None
 
-    # Фильтруем пользователей, убирая "TryFashion"
-    clients = [
-        user for user in user_info.get("users", [])
-        if user.get("public_user_profile", {}).get("name") and user["public_user_profile"]["name"] != "TryFashion"
-    ]
-
-    if not clients:
-        logger.info("Клиенты, кроме TryFashion, не найдены")
-        return None, None
-
-    # Берём данные первого найденного клиента
-    client = clients[0]
-    user_name = client["public_user_profile"].get("name", None)
-    user_url = client["public_user_profile"].get("url", None)
+    # Получаем первый элемент списка для имени и URL
+    user_name = next((user['name'] for user in response.json()['users'] if user['name'] != 'TryFashion'), None)
+    user_url = next(
+        (user['public_user_profile']['url'] for user in response.json()['users'] if user['name'] != 'TryFashion'), None)
 
     if user_name is None:
         logger.info("Имя не найдено")
