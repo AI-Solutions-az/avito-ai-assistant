@@ -41,6 +41,7 @@ def process_and_send_response(message: WebhookRequest):
                        f"_____\n\n"
                        f"💬Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
             logger.info("5.2. Добавление чата в список исключений")
+            # Добавление чата в список чатов с выключенным ассистентом
             add_chat(message.payload.value.chat_id)
     else:
         return None
@@ -51,11 +52,11 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     logger.info(message)
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
-
+    # Проверка наличия чата в списке чатов с выключенным ассистентом
     if chat_exists(chat_id):
         logger.info('0. Ассистент отключен в чате')
         return JSONResponse(content={"ok": True}, status_code=200)
-
+    # Проверка является ли сообщение сообщением от меня самого
     if message.payload.value.author_id == message.payload.value.user_id:
         if (re.search('оператор', message_text, re.IGNORECASE) or
                 re.search('менеджер', message_text, re.IGNORECASE)):
