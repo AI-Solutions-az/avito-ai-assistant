@@ -84,19 +84,20 @@ def get_user_info(user_id, chat_id):
         logger.error(f"Ошибка при получении информации о пользователе: {e}")
         return None, None
 
-    # Получение имени клиента
-    user_name = next((user.get("public_user_profile", {}).get("name")
-                      for user in user_info.get("users", [])
-                      if user.get("public_user_profile", {}).get("name")
-                      and user["public_user_profile"]["name"] != "TryFashion"),
-                     None)
+    # Фильтруем пользователей, убирая "TryFashion"
+    clients = [
+        user for user in user_info.get("users", [])
+        if user.get("public_user_profile", {}).get("name") and user["public_user_profile"]["name"] != "TryFashion"
+    ]
 
-    # Получение ссылки на клиента
-    user_url = next((user.get("public_user_profile", {}).get("url")
-                     for user in user_info.get("users", [])
-                     if user.get("public_user_profile", {}).get("name")
-                     and user["public_user_profile"]["name"] != "TryFashion"),
-                    None)
+    if not clients:
+        logger.info("Клиенты, кроме TryFashion, не найдены")
+        return None, None
+
+    # Берём данные первого найденного клиента
+    client = clients[0]
+    user_name = client["public_user_profile"].get("name", None)
+    user_url = client["public_user_profile"].get("url", None)
 
     if user_name is None:
         logger.info("Имя не найдено")
