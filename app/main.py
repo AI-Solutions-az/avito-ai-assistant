@@ -13,7 +13,7 @@ app = FastAPI()
 class LogRequestMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         body = await request.body()
-        logger.info(f"Request: {request.method} {request.url}")
+        logger.info(f"New request: {request.method} {request.url}")
         logger.info(f"Request body: {body.decode('utf-8')}")
 
         response = await call_next(request)

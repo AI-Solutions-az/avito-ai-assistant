@@ -50,7 +50,6 @@ def process_and_send_response(message: WebhookRequest):
 
 @router.post("/chat")
 def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
-    logger.info(f'ПОЛУЧЕН НОВЫЙ ЗАПРОС ОТ АВИТО: {message}')
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
     # Проверка наличия чата в списке чатов с выключенным ассистентом
