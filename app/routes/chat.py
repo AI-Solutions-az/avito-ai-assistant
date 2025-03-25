@@ -7,6 +7,7 @@ import re
 from app.services.telegram_bot import send_alert
 from app.redis_db import add_chat, chat_exists
 import logging
+from app.services.logs import send_log
 
 # Используем уже существующий логгер
 logger = logging.getLogger("uvicorn")
@@ -15,18 +16,18 @@ router = APIRouter()
 
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
-    logger.info("1. Получение информации о пользователе")
+    send_log(message=f"1. Получение информации о пользователе {message.payload.value.user_id}")
     user_name, user_url = get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
-    logger.info("2. Получение информации об объявлении, объявление должно принадлежать владельцу")
+    send_log(message=f"2. Получение информации об объявлении {message.payload.value.item_id}")
     ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
-    logger.info('3. Генерация ответа на сообщение пользователя')
+    send_log(message=f"3. Генерация ответа на сообщение пользователя")
     response = process_message(message.payload.value.author_id, message.payload.value.chat_id,
                                message.payload.value.content.text, ad_url)
     if response:
-        logger.info(f"Ответ: {response}")
-        logger.info('4. Отправка сгенерированного сообщения')
+        send_log(f"4. Отправка сгенерированного сообщения", response)
+
         send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
-        logger.info("5. Отправка сообщения в телеграм канал")
+        send_log(message="5. Отправка сообщения в телеграм канал")
         send_alert(f"💁‍♂️ {user_name}: {message.payload.value.content.text}\n"
                    f"🤖 Бот: {response}\n"
                    f"_____\n\n"
@@ -34,13 +35,13 @@ def process_and_send_response(message: WebhookRequest):
         # 5. Отправка уведомления в телеграм, если есть слово менеджер или оператор
         if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
                 re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
-            logger.info("5.1. Перевод сообщения на оператора!")
+            send_log(message="5.1. Перевод сообщения на оператора!")
             send_alert(f"‼️Требуется внимание менеджера:\n"
                        f"Объявление: {ad_url}\n"
                        f"Клиент {user_name}: {user_url}\n"
                        f"_____\n\n"
                        f"💬Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
-            logger.info("5.2. Добавление чата в список исключений")
+            send_log(message="5.2. Добавление чата в список исключений")
             # Добавление чата в список чатов с выключенным ассистентом
             add_chat(message.payload.value.chat_id)
     else:
@@ -48,19 +49,20 @@ def process_and_send_response(message: WebhookRequest):
 
 @router.post("/chat")
 def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
-    logger.info('ПОЛУЧЕН НОВЫЙ ЗАПРОС ОТ АВИТО')
-    logger.info(message)
+    send_log(message="ПОЛУЧЕН НОВЫЙ ЗАПРОС ОТ АВИТО", nested=message)
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
     # Проверка наличия чата в списке чатов с выключенным ассистентом
     if chat_exists(chat_id):
-        logger.info('0. Ассистент отключен в чате')
+        send_log(message="0. Ассистент отключен в чате")
+
         return JSONResponse(content={"ok": True}, status_code=200)
     # Проверка является ли сообщение сообщением от меня самого
     if message.payload.value.author_id == message.payload.value.user_id:
         if (re.search('оператор', message_text, re.IGNORECASE) or
                 re.search('менеджер', message_text, re.IGNORECASE)):
-            logger.info("4.3. Переключение на оператора самим оператором или чат-ботом")
+            send_log(message="4.3. Переключение на оператора самим оператором или чат-ботом")
+
             ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
             user_name, user_url = get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
             send_alert(f"‼️Требуется внимание менеджера:\n"
@@ -68,10 +70,12 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
                        f"Клиент {user_name}: {user_url}\n"
                        f"_____\n\n"
                        f"💬 Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
-            logger.info("4.4. Добавление чата в список исключений")
+            send_log(message="4.4. Добавление чата в список исключений")
+
             add_chat(chat_id)
         else:
-            logger.info('0. Вебхук на сообщение от самого себя')
+            send_log(message="0. Вебхук на сообщение от самого себя")
+
         return JSONResponse(content={"ok": True}, status_code=200)
 
     # Добавляем выполнение кода в фоне
