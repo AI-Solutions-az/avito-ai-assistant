@@ -12,12 +12,10 @@ app = FastAPI()
 
 class LogRequestMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Асинхронно получаем тело запроса
         body = await request.body()
         logger.info(f"Request: {request.method} {request.url}")
         logger.info(f"Request body: {body.decode('utf-8')}")
 
-        # Асинхронно обрабатываем следующий шаг в middleware
         response = await call_next(request)
         logger.info(f"Response: {response.status_code} {request.url}")
         return response
@@ -31,5 +29,5 @@ app.include_router(chat.router, tags=["Chat"])
 
 
 @app.get("/")
-async def read_root():
+def read_root():
     return {"message": "AI Assistant is running!"}

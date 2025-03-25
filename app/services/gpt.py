@@ -13,26 +13,22 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 logger = logging.getLogger("uvicorn")
 
 # Генерация ответа на сообщение клиента
-async def process_message(user_id: str, chat_id: str, message: str, ad_url):
+def process_message(user_id: str, chat_id:str, message: str, ad_url):
     logger.info(f"3.1. Получено сообщение от пользователя {user_id}: {message}")
 
     logger.info("3.2. Получение информации по объявлению из базы знаний")
-    stock = await fetch_google_sheet_stock(ad_url)  # асинхронный вызов
-
+    stock = fetch_google_sheet_stock(ad_url)
     # Выключаем бота, если не нашли объявление в базе знаний и отправляем уведомление об этом
     if not stock:
-        # await send_alert(f'Невозможно найти объявление {ad_url} в базе знаний')
+        # send_alert(f'Невозможно найти объявление {ad_url} в базе знаний')
         logger.warning("3.2.1. Объявление не найдено в базе знаний")
         return None
-
     # Запрос базы знаний
     logger.info("3.3. Получение информации по кейсам из базы знаний")
-    knowledge_base = await get_knowledge_base()  # асинхронный вызов
-
+    knowledge_base = get_knowledge_base()
     # Получение истории сообщений
-    history = await get_history(user_id, chat_id)  # асинхронный вызов
+    history = get_history(user_id, chat_id)
     history.append({"role": "user", "content": message})
-
     # Инструкция бота
     instructions = {"role": "developer", "content": f"{prompt}\n"
                                                     f"# INFORMATION: {stock}"
@@ -42,13 +38,12 @@ async def process_message(user_id: str, chat_id: str, message: str, ad_url):
     messages = [instructions] + history
 
     logger.info("3.4. Отправка запроса в ChatGPT")
-    # Асинхронный вызов OpenAI
-    response = await client.chat.completions.create(model="gpt-4o-mini", messages=messages)
+    response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
 
     reply = response.choices[0].message.content
 
     logger.info("3.5. Сохранение истории в редис")
-    await save_message(user_id, chat_id, "user", message)  # асинхронный вызов
-    await save_message(user_id, chat_id, "developer", reply)  # асинхронный вызов
+    save_message(user_id, chat_id, "user", message)
+    save_message(user_id, chat_id, "developer", reply)
 
     return reply

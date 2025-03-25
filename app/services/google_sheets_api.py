@@ -1,5 +1,5 @@
 import os
-import aiohttp
+import requests
 import json
 from dotenv import load_dotenv
 
@@ -12,7 +12,7 @@ RANGE = os.getenv("GOOGLE_RANGE")
 API_KEY = os.getenv("GOOGLE_API_KEY")
 
 
-async def fetch_google_sheet_stock(ad_url):
+def fetch_google_sheet_stock(ad_url):
     '''
     Поиск строки с идентификатором объявления
     Парсинг строки
@@ -21,10 +21,8 @@ async def fetch_google_sheet_stock(ad_url):
     :return:
     '''
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{WAREHOUSE_SHEET_NAME}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.json()
+    response = requests.get(url)
+    data = response.json()
 
     if "values" not in data or not data["values"]:
         print("Ошибка: данные не найдены")
@@ -57,7 +55,6 @@ async def fetch_google_sheet_stock(ad_url):
         return
 
     return parse_stock(extracted_rows)
-
 
 def parse_stock(data):
     '''
@@ -97,17 +94,14 @@ def parse_stock(data):
         print('Ошибка при парсинге строки из документа', e)
         return None
 
-
-async def get_knowledge_base():
+def get_knowledge_base():
     '''
     Получение информации из базы знаний
     :return:
     '''
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{KNOWLEDGE_BASE_SHEET_NAME}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.json()
+    response = requests.get(url)
+    data = response.json()
 
     if "values" not in data or not data["values"]:
         print("Ошибка: данные не найдены")
@@ -121,5 +115,5 @@ async def get_knowledge_base():
         }
         result.append(question_answer)
 
-    # Преобразуем в формат JSON и возвращаем
+        # Преобразуем в формат JSON и возвращаем
     return json.dumps(result, ensure_ascii=False, indent=2)
