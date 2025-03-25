@@ -24,7 +24,7 @@ def process_and_send_response(message: WebhookRequest):
     response = process_message(message.payload.value.author_id, message.payload.value.chat_id,
                                message.payload.value.content.text, ad_url)
     if response:
-        send_log(f"4. Отправка сгенерированного сообщения", response)
+        send_log(f"4. Отправка сгенерированного сообщения {response}")
 
         send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
         send_log(message="5. Отправка сообщения в телеграм канал")
