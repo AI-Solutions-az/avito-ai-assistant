@@ -28,7 +28,8 @@ def process_and_send_response(message: WebhookRequest):
         send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
         logger.info("5. Отправка сообщения в телеграм канал")
         send_alert(f"💁‍♂️ {user_name}: {message.payload.value.content.text}\n"
-                   f"🤖 Бот: {response}\n\n"
+                   f"🤖 Бот: {response}\n"
+                   f"_____\n\n"
                    f"💬 Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
         # 5. Отправка уведомления в телеграм, если есть слово менеджер или оператор
         if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
@@ -36,7 +37,8 @@ def process_and_send_response(message: WebhookRequest):
             logger.info("5.1. Перевод сообщения на оператора!")
             send_alert(f"‼️Требуется внимание менеджера:\n"
                        f"Объявление: {ad_url}\n"
-                       f"Клиент {user_name}: {user_url}\n\n"
+                       f"Клиент {user_name}: {user_url}\n"
+                       f"_____\n\n"
                        f"💬Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
             logger.info("5.2. Добавление чата в список исключений")
             add_chat(message.payload.value.chat_id)
@@ -62,7 +64,8 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
             user_name, user_url = get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
             send_alert(f"‼️Требуется внимание менеджера:\n"
                        f"Объявление: {ad_url}\n"
-                       f"Клиент {user_name}: {user_url}\n\n"
+                       f"Клиент {user_name}: {user_url}\n"
+                       f"_____\n\n"
                        f"💬 Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
             logger.info("4.4. Добавление чата в список исключений")
             add_chat(chat_id)
