@@ -64,3 +64,43 @@ def get_ad(user_id: int, item_id: int) -> str:
     except requests.exceptions.RequestException as e:
         logger.error(f"Ошибка при получении информации об объявлении: {e}")
         raise
+
+
+def get_user_info(user_id, chat_id):
+    """Получение информации о чате, а через него о клиенте"""
+    logger.info(f"Запрос информации об объявлении для пользователя {user_id}, item_id {chat_id}")
+    url = f"https://api.avito.ru/messenger/v2/accounts/{user_id}/chats/{chat_id}"
+    headers = {
+        "Authorization": f"Bearer {get_avito_token()}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        user_info = response.json()
+        logger.info(f"Информация об объявлении получена: {user_info}")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Ошибка при получении информации о пользователе: {e}")
+        return None, None
+
+    # Получение имени клиента
+    user_name = next((user.get("public_user_profile", {}).get("name")
+                      for user in user_info.get("users", [])
+                      if user.get("public_user_profile", {}).get("name")
+                      and user["public_user_profile"]["name"] != "TryFashion"),
+                     None)
+
+    # Получение ссылки на клиента
+    user_url = next((user.get("public_user_profile", {}).get("url")
+                     for user in user_info.get("users", [])
+                     if user.get("public_user_profile", {}).get("name")
+                     and user["public_user_profile"]["name"] != "TryFashion"),
+                    None)
+
+    if user_name is None:
+        logger.info("Имя не найдено")
+    if user_url is None:
+        logger.info("URL не найден")
+
+    return user_name, user_url

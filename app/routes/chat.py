@@ -1,7 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks
 from fastapi.responses import JSONResponse
 from app.models.schemas import WebhookRequest
-from app.services.avito_api import send_message, get_ad
+from app.services.avito_api import send_message, get_ad, get_user_info
 from app.services.gpt import process_message
 import re
 from app.services.telegram_bot import send_alert
@@ -16,21 +16,27 @@ router = APIRouter()
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
     logger.info("1. Получение информации об объявлении, объявление должно принадлежать владельцу")
+    user_name, user_url = get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
+    logger.info("2. Получение информации об объявлении, объявление должно принадлежать владельцу")
     ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
-    logger.info('2. Генерация ответа на сообщение пользователя')
+    logger.info('3. Генерация ответа на сообщение пользователя')
     response = process_message(message.payload.value.author_id, message.payload.value.chat_id,
                                message.payload.value.content.text, ad_url)
     if response:
         logger.info(f"Ответ: {response}")
-        logger.info('3. Отправка сгенерированного сообщения')
+        logger.info('4. Отправка сгенерированного сообщения')
         send_message(message.payload.value.user_id, message.payload.value.chat_id, response)
-        logger.info("4. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
+        logger.info("5. Отправка сообщения в телеграм канал")
+        send_alert(f"Клиент:{message.payload.value.content.text}\n"
+                   f"Бот:{response}")
+        logger.info("5. Отправка уведомления в телеграм, если есть слово менеджер или оператор")
         if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
                 re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
-            logger.info("4.1. Перевод сообщения на оператора!")
-            send_alert(f"Требуется внимание менеджера:\n {ad_url}")
-
-            logger.info("4.2. Добавление чата в список исключений")
+            logger.info("5.1. Перевод сообщения на оператора!")
+            send_alert(f"Требуется внимание менеджера:"
+                       f"Объявление: {ad_url}\n"
+                       f"Пользователь {user_name}: {user_url}")
+            logger.info("5.2. Добавление чата в список исключений")
             add_chat(message.payload.value.chat_id)
     else:
         return None
@@ -51,7 +57,10 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
                 re.search('менеджер', message_text, re.IGNORECASE)):
             logger.info("4.3. Переключение на оператора самим оператором или чат-ботом")
             ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
-            send_alert(f"Требуется внимание менеджера:\n {ad_url}")
+            user_name, user_url = get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
+            send_alert(f"Требуется внимание менеджера:"
+                       f"Объявление: {ad_url}\n"
+                       f"Пользователь {user_name}: {user_url}")
             logger.info("4.4. Добавление чата в список исключений")
             add_chat(chat_id)
         else:
