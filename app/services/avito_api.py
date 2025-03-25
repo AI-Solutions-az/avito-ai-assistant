@@ -85,9 +85,9 @@ def get_user_info(user_id, chat_id):
         return None, None
 
     # Получаем первый элемент списка для имени и URL
-    user_name = next((user['name'] for user in response.json()['users'] if user['name'] != 'TryFashion'), None)
+    user_name = next((user['name'] for user in user_info['users'] if user['name'] != 'TryFashion'), None)
     user_url = next(
-        (user['public_user_profile']['url'] for user in response.json()['users'] if user['name'] != 'TryFashion'), None)
+        (user['public_user_profile']['url'] for user in user_info['users'] if user['name'] != 'TryFashion'), None)
 
     if user_name is None:
         logger.info("Имя не найдено")
