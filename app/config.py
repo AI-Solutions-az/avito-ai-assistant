@@ -13,6 +13,15 @@ CLIENT_SECRET=os.getenv("CLIENT_SECRET")
 SOURCE_TOKEN=os.getenv("source_token")
 INGESTING_HOST=os.getenv("ingesting_host")
 
+RANGE = os.getenv("GOOGLE_RANGE")
+API_KEY = os.getenv("GOOGLE_API_KEY")
+SPREADSHEET_ID = os.getenv("GOOGLE_SPREADSHEET_ID")
+WAREHOUSE_SHEET_NAME = os.getenv("WAREHOUSE_SHEET_NAME")
+KNOWLEDGE_BASE_SHEET_NAME = os.getenv("KNOWLEDGE_BASE_SHEET_NAME")
+
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = os.getenv("REDIS_PORT")
+
 prompt = '''
 # GENERAL INFORMATION
 

@@ -1,62 +1,63 @@
-import os
-import requests
+import httpx
 import json
-from dotenv import load_dotenv
-
-load_dotenv()
-SPREADSHEET_ID = os.getenv("GOOGLE_SPREADSHEET_ID")
-WAREHOUSE_SHEET_NAME = os.getenv("WAREHOUSE_SHEET_NAME")
-KNOWLEDGE_BASE_SHEET_NAME = os.getenv("KNOWLEDGE_BASE_SHEET_NAME")
-
-RANGE = os.getenv("GOOGLE_RANGE")
-API_KEY = os.getenv("GOOGLE_API_KEY")
+from app.services.logs import logger
+from app.config import RANGE, SPREADSHEET_ID, WAREHOUSE_SHEET_NAME, KNOWLEDGE_BASE_SHEET_NAME, API_KEY
 
 
-def fetch_google_sheet_stock(ad_url):
+
+async def fetch_google_sheet_stock(ad_url):
     '''
     Поиск строки с идентификатором объявления
     Парсинг строки
     Возврат json'а с данными по товару и его доступности
-    :param ad_id:
+    :param ad_url:
     :return:
     '''
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{WAREHOUSE_SHEET_NAME}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
-    response = requests.get(url)
-    data = response.json()
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url)
+            response.raise_for_status()  # Проверка успешности запроса
+            data = response.json()
 
-    if "values" not in data or not data["values"]:
-        print("Ошибка: данные не найдены")
-        return
+            if "values" not in data or not data["values"]:
+                logger.error("Ошибка: данные не найдены")
+                return
 
-    headers = data["values"][0]  # Заголовки колонок
-    rows = data["values"][0:]  # Данные (без заголовков)
+            headers = data["values"][0]  # Заголовки колонок
+            rows = data["values"][1:]  # Данные (без заголовков)
 
-    ad_column_index = 1  # Индекс колонки B (нумерация с 0)
-    found_row_num = None
+            ad_column_index = 1  # Индекс колонки B (нумерация с 0)
+            found_row_num = None
 
-    for row_num, row in enumerate(rows, start=0):  # Начинаем с 2, так как 1-я строка — заголовки
-        if len(row) > ad_column_index and row[ad_column_index] == ad_url:
-            print(f"Объявление найдено в строке {row_num}")
-            found_row_num = row_num
-            break
+            for row_num, row in enumerate(rows, start=0):  # Начинаем с 2, так как 1-я строка — заголовки
+                if len(row) > ad_column_index and row[ad_column_index] == ad_url:
+                    logger.info(f"Объявление найдено в строке {row_num}")
+                    found_row_num = row_num
+                    break
 
-    if found_row_num is None:
-        print("Ошибка: объявление не найдено")
-        return
+            if found_row_num is None:
+                logger.error("Ошибка: объявление не найдено")
+                return
 
-    extracted_rows = []
-    for row in rows[found_row_num:]:  # -2, т.к. индексация с 0, а данные начинаются со 2-й строки
-        if not row:  # Останов, если пустая строка
-            break
-        extracted_rows.append(row)
+            extracted_rows = []
+            for row in rows[found_row_num:]:  # -2, т.к. индексация с 0, а данные начинаются со 2-й строки
+                if not row:  # Останов, если пустая строка
+                    break
+                extracted_rows.append(row)
 
-    if not extracted_rows:
-        print("Ошибка: данные не найдены")
-        return
+            if not extracted_rows:
+                logger.error("Ошибка: данные не найдены")
+                return
 
-    return parse_stock(extracted_rows)
+            return await parse_stock(extracted_rows)
 
-def parse_stock(data):
+        except httpx.RequestError as e:
+            logger.error(f"Ошибка при запросе: {e}")
+            return None
+
+
+async def parse_stock(data):
     '''
     Парсинг информации о найденной по идентификатору строке
     :param data:
@@ -91,29 +92,35 @@ def parse_stock(data):
 
         return json.dumps(product, ensure_ascii=False, indent=4)
     except Exception as e:
-        print('Ошибка при парсинге строки из документа', e)
+        logger.error('Ошибка при парсинге строки из документа', e)
         return None
 
-def get_knowledge_base():
+
+async def get_knowledge_base():
     '''
     Получение информации из базы знаний
     :return:
     '''
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{KNOWLEDGE_BASE_SHEET_NAME}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
-    response = requests.get(url)
-    data = response.json()
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url)
+            response.raise_for_status()  # Проверка успешности запроса
+            data = response.json()
 
-    if "values" not in data or not data["values"]:
-        print("Ошибка: данные не найдены")
-        return
-    result = []
+            if "values" not in data or not data["values"]:
+                logger.error("Ошибка: данные не найдены")
+                return
 
-    for row in data["values"]:
-        question_answer = {
-            'question': row[0],  # Первый элемент строки - это вопрос
-            'answer_example': row[1]  # Второй элемент строки - это ответ
-        }
-        result.append(question_answer)
+            result = []
+            for row in data["values"]:
+                question_answer = {
+                    'question': row[0],  # Первый элемент строки - это вопрос
+                    'answer_example': row[1]  # Второй элемент строки - это ответ
+                }
+                result.append(question_answer)
 
-        # Преобразуем в формат JSON и возвращаем
-    return json.dumps(result, ensure_ascii=False, indent=2)
+            return json.dumps(result, ensure_ascii=False, indent=2)
+        except httpx.RequestError as e:
+            logger.error(f"Ошибка при запросе: {e}")
+            return None

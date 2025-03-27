@@ -1,22 +1,18 @@
-import logging
 from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.routes import chat
-
-# Настройка логирования
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("uvicorn")
+from app.services.logs import logger
 
 app = FastAPI()
 
 
 class LogRequestMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        body = await request.body()
+        body = await request.body()  # Асинхронное получение тела запроса
         logger.info(f"New request: {request.method} {request.url}")
         logger.info(f"Request body: {body.decode('utf-8')}")
 
-        response = await call_next(request)
+        response = await call_next(request)  # Асинхронный вызов следующего обработчика
         logger.info(f"Response: {response.status_code} {request.url}")
         return response
 
@@ -29,5 +25,5 @@ app.include_router(chat.router, tags=["Chat"])
 
 
 @app.get("/")
-def read_root():
-    return {"message": "AI Assistant is running!"}
+async def read_root():
+    return {"message": "AI Assistant is running!"}  # Эта функция уже асинхронная, так как FastAPI её по умолчанию обрабатывает асинхронно
