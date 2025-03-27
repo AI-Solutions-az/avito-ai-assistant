@@ -3,16 +3,17 @@ from fastapi.responses import JSONResponse
 from app.models.schemas import WebhookRequest
 from app.services.avito_api import send_message, get_ad, get_user_info
 from app.services.gpt import process_message
-import re
 from app.services.telegram_bot import send_alert
 from app.redis_db import add_chat, chat_exists, get_last_message
 from app.services.logs import logger
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_bot import create_telegram_forum_topic, get_telegram_updates
+
 router = APIRouter()
 
 # Вынесение джобы в отдельную асинхронную функцию
 async def process_and_send_response(message: WebhookRequest):
+    logger.info('test')
     # Парсинг данных из сообщения
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
