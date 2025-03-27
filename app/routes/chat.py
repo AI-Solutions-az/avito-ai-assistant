@@ -36,10 +36,10 @@ async def process_and_send_response(message: WebhookRequest):
         thread_id = await get_telegram_updates()
         # Засылаем все ссылки сразу в чат
         await send_alert("Создан новый чат\n"
-                         f"Клиент: {user_name}"
-                         f"Ссылка на клиента: {user_url}"
-                         f"Объявление: {ad_url}"
-                         f"Ссылка на чат: {chat_url}", thread_id)
+                         f"Клиент: {user_name}\n"
+                         f"Ссылка на клиента: {user_url}\n"
+                         f"Объявление: {ad_url}\n"
+                         f"Ссылка на чат: {chat_url}\n", thread_id)
         # Создание чата в БД
         await create_chat(chat_id, thread_id, author_id, user_id, chat_url)
         logger.info(f'Новый чат {chat_id} создан')
