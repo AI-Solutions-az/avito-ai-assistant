@@ -10,11 +10,11 @@ async def create_order(chat_id, client_id, client_name, color, size, good_url, g
     async with SessionLocal() as session:
         try:
             new_order = Orders(
-                chat_id=chat_id,
-                client_id=client_id,
+                chat_id=str(chat_id),
+                client_id=str(client_id),
                 client_name=client_name,
                 color=color,
-                size=size,
+                size=str(size),
                 good_url=good_url,
                 good_name=good_name,
                 created_at=datetime.datetime.now(),

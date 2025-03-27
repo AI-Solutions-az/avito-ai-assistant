@@ -9,8 +9,8 @@ async def create_escalation(chat_id, client_id, client_name, chat_url, reason):
     async with SessionLocal() as session:
         try:
             new_escalation = Escalations(
-                chat_id=chat_id,
-                client_id=client_id,
+                chat_id=str(chat_id),
+                client_id=str(client_id),
                 client_name=client_name,
                 chat_url=chat_url,
                 reason=reason,

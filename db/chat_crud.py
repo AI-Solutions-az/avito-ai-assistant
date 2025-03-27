@@ -10,10 +10,10 @@ async def create_chat(chat_id, thread_id, client_id, user_id, chat_url, under_as
     async with SessionLocal() as session:
         try:
             new_chat = Chat(
-                chat_id=chat_id,
+                chat_id=str(chat_id),
                 thread_id=thread_id,
-                client_id=client_id,
-                user_id=user_id,
+                client_id=str(client_id),
+                user_id=str(user_id),
                 chat_url=chat_url,
                 under_assistant=under_assistant,
                 created_at=datetime.datetime.now(),
@@ -72,6 +72,3 @@ async def delete_chat(chat_id):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при удалении чата: {e}")
             await session.rollback()
-
-#asyncio.run(create_chat('123',123,'1243','4324d','fdwf'))
-print(asyncio.run(get_chat_by_id('123')).chat_url)

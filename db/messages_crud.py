@@ -10,8 +10,8 @@ async def create_message(chat_id, author_id, from_assistant=False, message=None)
     async with SessionLocal() as session:
         try:
             new_message = Messages(
-                chat_id=chat_id,
-                author_id=author_id,
+                chat_id=str(chat_id),
+                author_id=str(author_id),
                 from_assistant=from_assistant,
                 message=message,
                 created_at=datetime.datetime.now(),

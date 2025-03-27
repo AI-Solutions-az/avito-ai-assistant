@@ -29,9 +29,9 @@ async def process_and_send_response(message: WebhookRequest):
     last_assistant_message = await get_last_message(user_id, chat_id,'developer')
 
     # Проверка существования чата с пользователем в БД
-    if not get_chat_by_id(chat_id):
+    if not await get_chat_by_id(chat_id):
         # Создание топика в телеграм
-        await create_telegram_forum_topic(f'{user_name}+" "+ {item_id}')
+        await create_telegram_forum_topic(f'{user_name}, {item_id}')
         # Получение номера топика
         thread_id = await get_telegram_updates()
         # Засылаем все ссылки сразу в чат
@@ -73,8 +73,7 @@ async def process_and_send_response(message: WebhookRequest):
         logger.info("5. Отправка сообщения в телеграм канал")
         await send_alert(f"💁‍♂️ {user_name}: {message_text}\n"
                          f"🤖 Бот: {response}\n"
-                         f"_____\n\n"
-                         f"💬 Диалог: https://www.avito.ru/profile/messenger/channel/{chat_id}", thread_id=chat_object.thread_id)
+                         f"_____\n\n", thread_id=chat_object.thread_id)
         return None
     else:
         logger.error('Не получен ответ от модели')

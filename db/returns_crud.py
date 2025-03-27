@@ -10,8 +10,8 @@ async def create_return(chat_id, client_id, client_name, reason, good_url):
     async with SessionLocal() as session:
         try:
             new_return = Returns(
-                chat_id=chat_id,
-                client_id=client_id,
+                chat_id=str(chat_id),
+                client_id=str(client_id),
                 client_name=client_name,
                 reason=reason,
                 good_url=good_url,
