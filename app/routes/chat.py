@@ -4,10 +4,10 @@ from app.models.schemas import WebhookRequest
 from app.services.avito_api import send_message, get_ad, get_user_info
 from app.services.gpt import process_message
 from app.services.telegram_bot import send_alert
-from app.redis_db import add_chat, chat_exists, get_last_message
 from app.services.logs import logger
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_bot import create_telegram_forum_topic, get_telegram_updates
+from db.messages_crud import get_latest_message_by_chat_id
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ async def process_and_send_response(message: WebhookRequest):
     # Получение имени пользователя и ссылки на него
     user_name, user_url = await get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
     # Последнее сообщение от бота в чате
-    last_assistant_message = await get_last_message(user_id, chat_id,'developer')
+    last_message = await get_latest_message_by_chat_id(chat_id)
 
     # Проверка существования чата с пользователем в БД
     if not await get_chat_by_id(chat_id):
@@ -52,10 +52,10 @@ async def process_and_send_response(message: WebhookRequest):
 
     # Проверяем от кого сообщение
     if user_id==author_id:
-        print('Последнее сообщение от бота из редис', last_assistant_message)
+        print('Последнее сообщение от бота из БД', last_message)
         print('Сообщение, которое поступило', message_text)
         # Сообщение от самого себя
-        if last_assistant_message==message_text:
+        if last_message==message_text:
             # Тексты сообщений совпали
             logger.info(f'Хук на собственное сообщение в чате {chat_id}')
         else:

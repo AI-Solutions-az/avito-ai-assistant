@@ -25,14 +25,18 @@ async def create_message(chat_id, author_id, from_assistant=False, message=None)
             await session.rollback()
 
 # Read
-async def get_message_by_id(message_id):
+async def get_latest_message_by_chat_id(chat_id):
     async with SessionLocal() as session:
         try:
-            result = await session.execute(select(Messages).filter_by(id=message_id))
-            message = result.scalar_one_or_none()
-            return message
+            result = await session.execute(
+                select(Messages.message)
+                .filter(Messages.chat_id == chat_id)
+                .order_by(Messages.created_at.desc())  # Сортировка по убыванию времени
+            )
+            latest_message = result.scalars().first()  # Получаем самое позднее сообщение
+            return latest_message
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при получении сообщения: {e}")
+            logger.error(f"Ошибка при получении сообщения: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
             return None
 
 # Update
