@@ -1,31 +1,43 @@
 import httpx
-from functools import lru_cache
+import asyncio
+from time import time
 from app.config import CLIENT_ID, CLIENT_SECRET
 from app.services.logs import logger
 
-@lru_cache(maxsize=1)
+# Глобальные переменные для кеширования токена
+_avito_token = None
+_token_expiry = 0
+_lock = asyncio.Lock()
+
 async def get_avito_token() -> str:
     """Получение токена Avito API с кешированием"""
-    logger.info("Запрос на получение токена Avito API")
-    url = "https://api.avito.ru/token/"
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data = {
-        "grant_type": "client_credentials",
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET
-    }
+    global _avito_token, _token_expiry
 
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, data=data)
-            response.raise_for_status()
-            token = response.json().get("access_token", "")
-            logger.info("Токен Avito получен успешно")
-            return token
-    except httpx.RequestError as e:
-        logger.error(f"Ошибка при получении токена Avito: {e}")
-        raise
+    async with _lock:  # Блокируем одновременные запросы на обновление токена
+        if _avito_token and time() < _token_expiry:
+            return _avito_token  # Возвращаем закешированный токен, если он ещё действителен
 
+        logger.info("Запрос на получение токена Avito API")
+        url = "https://api.avito.ru/token/"
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        data = {
+            "grant_type": "client_credentials",
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET
+        }
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, headers=headers, data=data)
+                response.raise_for_status()
+                token_data = response.json()
+                _avito_token = token_data.get("access_token", "")
+                _token_expiry = time() + token_data.get("expires_in", 3600) - 60  # Минус 60 сек для надёжности
+                logger.info("Токен Avito получен успешно")
+                return _avito_token
+        except httpx.RequestError as e:
+            logger.error(f"Ошибка при получении токена Avito: {e}")
+            raise
 
 async def send_message(user_id: int, chat_id: str, text: str) -> None:
     """Отправка сообщения пользователю в Avito"""
@@ -45,7 +57,6 @@ async def send_message(user_id: int, chat_id: str, text: str) -> None:
     except httpx.RequestError as e:
         logger.error(f"Ошибка при отправке сообщения: {e}")
         raise
-
 
 async def get_ad(user_id: int, item_id: int) -> str:
     """Получение информации об объявлении"""
@@ -67,10 +78,9 @@ async def get_ad(user_id: int, item_id: int) -> str:
         logger.error(f"Ошибка при получении информации об объявлении: {e}")
         raise
 
-
 async def get_user_info(user_id, chat_id):
     """Получение информации о чате, а через него о клиенте"""
-    logger.info(f"Запрос информации об объявлении для пользователя {user_id}, item_id {chat_id}")
+    logger.info(f"Запрос информации о чате для пользователя {user_id}, chat_id {chat_id}")
     url = f"https://api.avito.ru/messenger/v2/accounts/{user_id}/chats/{chat_id}"
     headers = {
         "Authorization": f"Bearer {await get_avito_token()}",
@@ -82,7 +92,7 @@ async def get_user_info(user_id, chat_id):
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             user_info = response.json()
-            logger.info(f"Информация об пользователе получена: {user_info}")
+            logger.info(f"Информация о пользователе получена: {user_info}")
     except httpx.RequestError as e:
         logger.error(f"Ошибка при получении информации о пользователе: {e}")
         return None, None

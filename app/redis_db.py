@@ -56,3 +56,16 @@ async def chat_exists(chat_id):
     logger.info(f"Проверка существования чата {chat_id}: {'найден' if exists else 'не найден'}")
     await redis.close()  # Закрытие соединения после использования
     return exists
+
+
+async def get_last_developer_message(user_id, chat_id):
+    history = await get_history(user_id, chat_id)
+    if not history:
+        return None  # Если истории нет, возвращаем None
+
+    # Ищем последнее сообщение от разработчика
+    for message in reversed(history):
+        if message["role"] == "developer":
+            return message["content"]
+
+    return None  # Если сообщений от разработчика нет
