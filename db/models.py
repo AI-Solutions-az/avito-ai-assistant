@@ -37,7 +37,7 @@ class Orders(Base):
     client_name = Column(String)
     color = Column(String)
     size = Column(String)
-    good_name = Column(String),
+    good_name = Column(String)
     good_url = Column(String)
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
