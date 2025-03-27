@@ -154,7 +154,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                 reply = response.json()['choices'][0]['message']['content']
                 logger.info("3.7. Сохранение ответа модели в истории редис после ВОЗВРАТА")
                 await save_message(client_id, chat_id, "developer", reply)
-                await create_message(chat_id, user_id, from_assistant=True, message=message)
+                await create_message(chat_id, user_id, from_assistant=True, message=reply)
                 return reply
 
             if name == 'create_order':
@@ -186,7 +186,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                 reply = response.json()['choices'][0]['message']['content']
                 logger.info("3.8. Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ")
                 await save_message(client_id, chat_id, "developer", reply)
-                await create_message(chat_id, user_id, from_assistant=True, message=message)
+                await create_message(chat_id, user_id, from_assistant=True, message=reply)
 
                 return reply
 
@@ -218,7 +218,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                 reply = response.json()['choices'][0]['message']['content']
                 logger.info("3.8. Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ")
                 await save_message(client_id, chat_id, "developer", reply)
-                await create_message(chat_id, user_id, from_assistant=True, message=message)
+                await create_message(chat_id, user_id, from_assistant=True, message=reply)
 
                 return reply
 
@@ -226,7 +226,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
         reply = response.json()['choices'][0]['message']['content']
         logger.info("3.9. Сохранение ответа модели в редис")
         await save_message(client_id, chat_id, "developer", reply)
-        await create_message(chat_id, user_id, from_assistant=True, message=message)
+        await create_message(chat_id, user_id, from_assistant=True, message=reply)
 
         # Ответ если не было вызова инструмента
         return reply
