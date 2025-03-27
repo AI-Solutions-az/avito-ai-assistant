@@ -5,11 +5,7 @@ from app.config import REDIS_HOST, REDIS_PORT
 
 # Асинхронное подключение к Redis
 async def get_redis():
-    return await aioredis.from_url(
-        (REDIS_HOST, REDIS_PORT),
-        encoding='utf-8',
-        decode_responses=True
-    )
+    return await aioredis.from_url(f"redis://{REDIS_HOST}:{REDIS_PORT}", encoding='utf-8', decode_responses=True)
 
 
 # Получение истории сообщений по user_id и chat_id
