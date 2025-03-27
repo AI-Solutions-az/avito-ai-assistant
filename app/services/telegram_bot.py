@@ -41,3 +41,32 @@ async def create_telegram_forum_topic(topic_name):
                 logger.error(f"Ошибка при создании топика: {response.text}")
         except httpx.RequestError as e:
             logger.error(f"Ошибка при отправке запроса: {e}")
+
+
+async def get_telegram_updates():
+    url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates'
+
+    # Параметры для получения обновлений
+    params = {
+        'offset': -1,  # ID последнего обработанного сообщения (если нужно)
+        'limit': 5  # Количество сообщений для получения
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            # Отправка запроса
+            response = await client.get(url, params=params)
+
+            # Проверка ответа
+            if response.status_code == 200:
+                updates = response.json().get('result', [])
+                for update in updates:
+                    if 'message' in update and 'message_thread_id' in update['message']:
+                        thread_id = update['message']['message_thread_id']
+                        return thread_id
+                    else:
+                        logger.info("Не найден thread_id в сообщении.")
+            else:
+                logger.error(f"Ошибка при получении обновлений: {response.text}")
+        except httpx.RequestError as e:
+            logger.error(f"Ошибка при отправке запроса: {e}")

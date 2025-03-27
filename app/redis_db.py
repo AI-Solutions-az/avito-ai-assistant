@@ -58,14 +58,14 @@ async def chat_exists(chat_id):
     return exists
 
 
-async def get_last_developer_message(user_id, chat_id):
+async def get_last_message(user_id, chat_id, role):
     history = await get_history(user_id, chat_id)
     if not history:
         return None  # Если истории нет, возвращаем None
 
     # Ищем последнее сообщение от разработчика
     for message in reversed(history):
-        if message["role"] == "developer":
+        if message["role"] == role:
             return message["content"]
 
     return None  # Если сообщений от разработчика нет
