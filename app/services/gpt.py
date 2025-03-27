@@ -167,7 +167,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                 await send_alert(f"Новый заказ\n\n"
                                  f"Товар: {ad_url}\n"
                                  f"Размер: {size}\n"
-                                 f"Цвет: {color}", thread_id=75)
+                                 f"Цвет: {color}", thread_id=138)
                 # Сохранение создания заказа в БД
                 await create_order(chat_id, client_id, client_name, color, size, ad_url, good_name)
                 # Генерация ответа пользователю
