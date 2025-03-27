@@ -13,7 +13,6 @@ router = APIRouter()
 
 # Вынесение джобы в отдельную асинхронную функцию
 async def process_and_send_response(message: WebhookRequest):
-    logger.info('test')
     # Парсинг данных из сообщения
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
