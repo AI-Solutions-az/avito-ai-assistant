@@ -32,6 +32,8 @@
 `redis-server`
 - Проверка работы Redis: <br>
 `redis-cli ping`
+- Очистка кэша
+`redis-cli FLUSHALL`
 
 Должно вернуть: PONG
 
