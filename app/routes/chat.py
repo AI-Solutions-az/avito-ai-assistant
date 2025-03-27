@@ -28,7 +28,7 @@ def process_and_send_response(message: WebhookRequest):
         send_alert(f"💁‍♂️ {user_name}: {message.payload.value.content.text}\n"
                    f"🤖 Бот: {response}\n"
                    f"_____\n\n"
-                   f"💬 Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
+                   f"💬 Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}", thread_id=0)
         # 5. Отправка уведомления в телеграм, если есть слово менеджер или оператор
         if (re.search('оператор', message.payload.value.content.text, re.IGNORECASE) or
                 re.search('менеджер', message.payload.value.content.text, re.IGNORECASE)):
@@ -37,7 +37,7 @@ def process_and_send_response(message: WebhookRequest):
                        f"Объявление: {ad_url}\n"
                        f"Клиент {user_name}: {user_url}\n"
                        f"_____\n\n"
-                       f"💬Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
+                       f"💬Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}", thread_id=0)
             logger.info("5.2. Добавление чата в список исключений")
             # Добавление чата в список чатов с выключенным ассистентом
             add_chat(message.payload.value.chat_id)
@@ -63,7 +63,7 @@ def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
                        f"Объявление: {ad_url}\n"
                        f"Клиент {user_name}: {user_url}\n"
                        f"_____\n\n"
-                       f"💬 Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}")
+                       f"💬 Диалог: https://www.avito.ru/profile/messenger/channel/{message.payload.value.chat_id}", thread_id=0)
             logger.info("4.4. Добавление чата в список исключений")
             add_chat(chat_id)
         else:

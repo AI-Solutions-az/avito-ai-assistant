@@ -7,11 +7,11 @@ logger = logging.getLogger("uvicorn")
 
 
 # Отправка сообщения в чат
-def send_alert(message):
+def send_alert(message, thread_id):
     logger.info(f"Отправка уведомления в Telegram: {message}")
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+    data = {"chat_id": TELEGRAM_CHAT_ID, "message_thread_id":thread_id, "text": message}
 
     try:
         response = requests.post(url, data=data)
@@ -40,5 +40,3 @@ def create_telegram_forum_topic(topic_name):
         print(f"Топик '{topic_name}' успешно создан!")
     else:
         print(f"Ошибка при создании топика: {response.text}")
-
-
