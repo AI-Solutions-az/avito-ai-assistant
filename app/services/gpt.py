@@ -96,7 +96,10 @@ def process_message(user_id: str, chat_id:str, message: str, ad_url):
             instructions = [{"role": "developer"
                                 , "content": f'Сообщи о том, что возврат оформлен на заказа от {date_of_order} по причине {reason}'
                              }]
-            response = client.chat.completions.create(model="gpt-4o-mini", messages=instructions)
+
+            messages = [instructions] + history
+
+            response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
             reply = response.choices[0].message.content
             logger.info("3.7. Сохранение истории в редис")
             save_message(user_id, chat_id, "developer", reply)
