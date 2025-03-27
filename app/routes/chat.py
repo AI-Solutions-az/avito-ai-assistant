@@ -83,8 +83,6 @@ async def process_and_send_response(message: WebhookRequest):
 @router.post("/chat")
 async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     # Добавляем выполнение кода в фоне
-    logger.info('test2')
-
     background_tasks.add_task(process_and_send_response, message)
 
     return JSONResponse(content={"ok": True}, status_code=200)
