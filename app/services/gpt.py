@@ -93,9 +93,9 @@ def process_message(user_id: str, chat_id:str, message: str, ad_url):
                        f"Причина: {reason}")
 
             # Генерация ответа пользователю
-            instructions = [{"role": "developer"
+            instructions = {"role": "developer"
                                 , "content": f'Сообщи о том, что возврат оформлен на заказа от {date_of_order} по причине {reason}'
-                             }]
+                             }
 
             messages = [instructions] + history
 
