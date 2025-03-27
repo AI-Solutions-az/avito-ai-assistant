@@ -112,6 +112,7 @@ def process_message(user_id: str, chat_id:str, message: str, ad_url):
 
             # Оформление возврата и оповещение менеджера
             send_alert(f"Новая заявка на возврат\n\n"
+                       f"Товар: {ad_url}\n"
                        f"Заказ от: {date_of_order}\n"
                        f"Причина: {reason}", thread_id=76)
 
