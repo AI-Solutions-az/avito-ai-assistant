@@ -39,7 +39,7 @@ async def get_message_by_id(message_id):
 async def update_message(message_id, chat_id=None, author_id=None, from_assistant=None, message=None):
     async with SessionLocal() as session:
         try:
-            message_record = await get_message_by_id(message_id)
+            message_record = await session.get(Messages, message_id)  # Загружаем объект в сессию
             if message_record:
                 if chat_id is not None:
                     message_record.chat_id = chat_id
@@ -50,10 +50,12 @@ async def update_message(message_id, chat_id=None, author_id=None, from_assistan
                 if message is not None:
                     message_record.message = message
                 message_record.updated_at = datetime.datetime.now()
+
+                await session.merge(message_record)  # Обновляем объект в сессии
                 await session.commit()
             return message_record
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при обновлении сообщения: {e}")
+            logger.error(f"Ошибка при обновлении сообщения: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
             await session.rollback()
 
 # Delete

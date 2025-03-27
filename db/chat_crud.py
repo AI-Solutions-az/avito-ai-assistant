@@ -37,11 +37,11 @@ async def get_chat_by_id(chat_id):
             logger.error(f"Ошибка при получении чата: {e}")
             return None
 
-# Update
+
 async def update_chat(chat_id, thread_id=None, client_id=None, user_id=None, under_assistant=None, chat_url=None):
     async with SessionLocal() as session:
         try:
-            chat = await get_chat_by_id(chat_id)
+            chat = await session.get(Chat, chat_id)  # Получаем объект внутри сессии
             if chat:
                 if thread_id is not None:
                     chat.thread_id = thread_id
@@ -54,11 +54,14 @@ async def update_chat(chat_id, thread_id=None, client_id=None, user_id=None, und
                 if under_assistant is not None:
                     chat.under_assistant = under_assistant
                 chat.updated_at = datetime.datetime.now()
+
+                await session.merge(chat)  # Обновляем объект в сессии
                 await session.commit()
             return chat
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при обновлении чата: {e}")
+            logger.error(f"Ошибка при обновлении чата: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
             await session.rollback()
+
 
 # Delete
 async def delete_chat(chat_id):

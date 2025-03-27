@@ -40,7 +40,7 @@ async def get_return_by_id(return_id):
 async def update_return(return_id, chat_id=None, client_id=None, client_name=None, reason=None, good_url=None):
     async with SessionLocal() as session:
         try:
-            return_record = await get_return_by_id(return_id)
+            return_record = await session.get(Returns, return_id)  # Загружаем объект в сессию
             if return_record:
                 if chat_id is not None:
                     return_record.chat_id = chat_id
@@ -53,10 +53,12 @@ async def update_return(return_id, chat_id=None, client_id=None, client_name=Non
                 if good_url is not None:
                     return_record.good_url = good_url
                 return_record.updated_at = datetime.datetime.now()
+
+                await session.merge(return_record)  # Обновляем объект в сессии
                 await session.commit()
             return return_record
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при обновлении возврата: {e}")
+            logger.error(f"Ошибка при обновлении возврата: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
             await session.rollback()
 
 # Delete

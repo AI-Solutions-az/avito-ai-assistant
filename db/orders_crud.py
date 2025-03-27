@@ -39,10 +39,11 @@ async def get_order_by_id(order_id):
             return None
 
 # Update
+# Update order
 async def update_order(order_id, chat_id=None, client_id=None, client_name=None, color=None, size=None, good_url=None):
     async with SessionLocal() as session:
         try:
-            order = await get_order_by_id(order_id)
+            order = await session.get(Orders, order_id)  # Загружаем объект в сессию
             if order:
                 if chat_id is not None:
                     order.chat_id = chat_id
@@ -57,10 +58,12 @@ async def update_order(order_id, chat_id=None, client_id=None, client_name=None,
                 if good_url is not None:
                     order.good_url = good_url
                 order.updated_at = datetime.datetime.now()
+
+                await session.merge(order)  # Обновляем объект в сессии
                 await session.commit()
             return order
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при обновлении заказа: {e}")
+            logger.error(f"Ошибка при обновлении заказа: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
             await session.rollback()
 
 # Delete

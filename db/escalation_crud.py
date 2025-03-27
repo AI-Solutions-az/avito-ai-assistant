@@ -3,6 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 from db.db_config import SessionLocal
 from db.models import Escalations
+from app.services.logs import logger
 
 # Create
 async def create_escalation(chat_id, client_id, client_name, chat_url, reason):
@@ -35,11 +36,11 @@ async def get_escalation_by_id(escalation_id):
             logger.error(f"Ошибка при получении эскалации: {e}")
             return None
 
-# Update
+# Update escalation
 async def update_escalation(escalation_id, chat_id=None, client_id=None, client_name=None, chat_url=None, reason=None):
     async with SessionLocal() as session:
         try:
-            escalation = await get_escalation_by_id(escalation_id)
+            escalation = await session.get(Escalations, escalation_id)  # Загружаем объект внутри сессии
             if escalation:
                 if chat_id is not None:
                     escalation.chat_id = chat_id
@@ -52,10 +53,12 @@ async def update_escalation(escalation_id, chat_id=None, client_id=None, client_
                 if reason is not None:
                     escalation.reason = reason
                 escalation.updated_at = datetime.datetime.now()
+
+                await session.merge(escalation)  # Обновляем объект в сессии
                 await session.commit()
             return escalation
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при обновлении эскалации: {e}")
+            logger.error(f"Ошибка при обновлении эскалации: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
             await session.rollback()
 
 # Delete
