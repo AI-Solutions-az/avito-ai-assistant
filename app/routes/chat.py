@@ -16,12 +16,8 @@ router = APIRouter()
 
 # Вынесение джобы в отдельную функцию, чтобы работало как надо
 def process_and_send_response(message: WebhookRequest):
-    logger.info("1. Получение информации о пользователе {message.payload.value.user_id}")
     user_name, user_url = get_user_info(message.payload.value.user_id, message.payload.value.chat_id)
-    logger.info("2. Получение информации об объявлении, объявление должно принадлежать владельцу")
-
     ad_url = get_ad(message.payload.value.user_id, message.payload.value.item_id)
-    logger.info('3. Генерация ответа на сообщение пользователя')
     response = process_message(message.payload.value.author_id, message.payload.value.chat_id,
                                message.payload.value.content.text, ad_url)
     if response:

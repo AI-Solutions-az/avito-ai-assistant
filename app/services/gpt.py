@@ -15,6 +15,7 @@ logger = logging.getLogger("uvicorn")
 
 # Генерация ответа на сообщение клиента
 def process_message(user_id: str, chat_id:str, message: str, ad_url):
+    logger.info('3. Генерация ответа на сообщение пользователя')
     logger.info(f"3.1. Получено сообщение от пользователя {user_id}: {message}")
     logger.info("3.2. Получение информации по объявлению из базы знаний")
     stock = fetch_google_sheet_stock(ad_url)
@@ -66,7 +67,29 @@ def process_message(user_id: str, chat_id:str, message: str, ad_url):
                                                       "required": ["date_of_order", "reason"]
                                                     }
                                                   }
-                                                }]
+                                                },
+                                                {
+                                                    "type": "function",
+                                                    "function": {
+                                                        "name": "create_order",
+                                                        "description": "Get size, color of good",
+                                                        "parameters": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "size": {
+                                                                    "type": "string",
+                                                                    "description": "Size of the good"
+                                                                },
+                                                                "color": {
+                                                                    "type": "string",
+                                                                    "description": "Color of the good"
+                                                                }
+                                                            },
+                                                            "required": ["size", "color"]
+                                                        }
+                                                    }
+                                                }
+                                            ]
                                               , tool_choice="auto"
                                               )
 
@@ -101,12 +124,42 @@ def process_message(user_id: str, chat_id:str, message: str, ad_url):
 
             response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
             reply = response.choices[0].message.content
-            logger.info("3.7. Сохранение истории в редис")
+            logger.info("3.7. Сохранение ответа модели в истории редис после ВОЗВРАТА")
             save_message(user_id, chat_id, "developer", reply)
+
             return reply
 
+        if name == 'create_order':
+            logger.info("3.6. Произошел вызов инструмента СОЗДАТЬ ЗАКАЗ")
+            # Парсим JSON аргументы
+            arguments = json.loads(tool_call.function.arguments)
+            # Извлекаем нужные поля
+            size = arguments.get("size")
+            color = arguments.get("color")
+
+            # Оформление возврата и оповещение менеджера
+            send_alert(f"Новый заказ\n\n"
+                       f"Товар: {ad_url}\n"
+                       f"Размер: {size}\n"
+                       f"Цвет: {color}")
+
+            # Генерация ответа пользователю
+            instructions = {"role": "developer"
+                                , "content": f'Поблагодари клиента за заказ и сообщи, что оформить заказ можно по этому объявлению с указанием доступных способов доставки'
+                             }
+
+            messages = [instructions] + history
+
+            response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
+            reply = response.choices[0].message.content
+            logger.info("3.8. Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ")
+            save_message(user_id, chat_id, "developer", reply)
+
+            return reply
+
+
     reply = response.choices[0].message.content
-    logger.info("3.8. Сохранение истории в редис")
+    logger.info("3.9. Сохранение истории в редис обычного сообщения")
     save_message(user_id, chat_id, "developer", reply)
 
     # Ответ если не было вызова инструмента
