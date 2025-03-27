@@ -124,6 +124,3 @@ async def get_knowledge_base():
         except httpx.RequestError as e:
             logger.error(f"Ошибка при запросе: {e}")
             return None
-
-import asyncio
-asyncio.run(fetch_google_sheet_stock('https://www.avito.ru/moskva/odezhda_obuv_aksessuary/futbolka_lacoste_7257007045'))
