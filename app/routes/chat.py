@@ -52,6 +52,8 @@ async def process_and_send_response(message: WebhookRequest):
 
     # Проверяем от кого сообщение
     if user_id==author_id:
+        print('Последнее сообщение от бота из редис', last_assistant_message)
+        print('Сообщение, которое поступило', message_text)
         # Сообщение от самого себя
         if last_assistant_message==message_text:
             # Тексты сообщений совпали
