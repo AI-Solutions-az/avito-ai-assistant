@@ -25,6 +25,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
 
     # Выключаем бота, если не нашли объявление в базе знаний и отправляем уведомление об этом
     if not data:
+        await send_alert()
         logger.warning("3.2.1. Объявление не найдено в базе знаний")
         return None
 
@@ -88,7 +89,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                         "type": "function",
                         "function": {
                             "name": "create_order",
-                            "description": "Get size, color of good",
+                            "description": "Get size, color of good and get confirmation that client is ready to place an order",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
