@@ -7,6 +7,7 @@ import datetime
 
 # Create
 async def create_message(chat_id, author_id, from_assistant=False, message=None):
+    logger.info(f"[DB] Создание сообщения в чате {chat_id}, от {author_id}")
     async with SessionLocal() as session:
         try:
             new_message = Messages(
@@ -19,6 +20,7 @@ async def create_message(chat_id, author_id, from_assistant=False, message=None)
             )
             session.add(new_message)
             await session.commit()
+            logger.info(f"[DB] Сообщение создано в чате {chat_id}, от {author_id}")
             return new_message
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при добавлении сообщения: {e}")
@@ -26,6 +28,7 @@ async def create_message(chat_id, author_id, from_assistant=False, message=None)
 
 # Read
 async def get_latest_message_by_chat_id(chat_id):
+    logger.info(f"[DB] Получение последнего сообщения из БД для чата {chat_id}")
     async with SessionLocal() as session:
         try:
             result = await session.execute(
@@ -34,9 +37,10 @@ async def get_latest_message_by_chat_id(chat_id):
                 .order_by(Messages.created_at.desc())  # Сортировка по убыванию времени
             )
             latest_message = result.scalars().first()  # Получаем самое позднее сообщение
+            logger.info(f"[DB] Последнее сообщение для чата {chat_id} получено из БД. Сообщение: {latest_message}")
             return latest_message
         except SQLAlchemyError as e:
-            logger.error(f"Ошибка при получении сообщения: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
+            logger.error(f"[DB] Ошибка при получении сообщения: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
             return None
 
 # Update
@@ -60,17 +64,4 @@ async def update_message(message_id, chat_id=None, author_id=None, from_assistan
             return message_record
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при обновлении сообщения: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
-            await session.rollback()
-
-# Delete
-async def delete_message(message_id):
-    async with SessionLocal() as session:
-        try:
-            message_record = await get_message_by_id(message_id)
-            if message_record:
-                await session.delete(message_record)
-                await session.commit()
-            return message_record
-        except SQLAlchemyError as e:
-            logger.error(f"Ошибка при удалении сообщения: {e}")
             await session.rollback()

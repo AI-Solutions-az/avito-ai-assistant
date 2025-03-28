@@ -7,6 +7,7 @@ from sqlalchemy.future import select
 from app.services.logs import logger
 
 async def create_chat(chat_id, thread_id, client_id, user_id, chat_url, under_assistant=True):
+    logger.info(f"[DB] Создание чата {chat_id}")
     async with SessionLocal() as session:
         try:
             new_chat = Chat(
@@ -21,6 +22,7 @@ async def create_chat(chat_id, thread_id, client_id, user_id, chat_url, under_as
             )
             session.add(new_chat)
             await session.commit()
+            logger.info(f"[DB] Чат {chat_id} создан")
             return new_chat
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при добавлении чата в БД: {e}")
@@ -28,10 +30,12 @@ async def create_chat(chat_id, thread_id, client_id, user_id, chat_url, under_as
 
 # Read
 async def get_chat_by_id(chat_id):
+    logger.info(f"[DB] Получение информации по чату {chat_id}")
     async with SessionLocal() as session:
         try:
             result = await session.execute(select(Chat).filter_by(chat_id=chat_id))
             chat = result.scalar_one_or_none()
+            logger.info(f"[DB] Информация по чату {chat_id} получена")
             return chat
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при получении чата: {e}")
@@ -39,6 +43,7 @@ async def get_chat_by_id(chat_id):
 
 
 async def update_chat(chat_id, thread_id=None, client_id=None, user_id=None, under_assistant=None, chat_url=None):
+    logger.info(f"Изменение чата {chat_id}")
     async with SessionLocal() as session:
         try:
             chat = await session.get(Chat, chat_id)  # Получаем объект внутри сессии

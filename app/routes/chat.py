@@ -46,6 +46,7 @@ async def message_collector(chat_id, message: WebhookRequest):
 
 async def process_and_send_response(message: WebhookRequest):
     """ Обрабатывает сообщение и отправляет ответ """
+    logger.info(f'[Logic] Обработка запроса от {message.payload.value.author_id}')
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
     user_id = message.payload.value.user_id
@@ -56,15 +57,15 @@ async def process_and_send_response(message: WebhookRequest):
     ad_url = await get_ad(user_id, item_id)
     user_name, user_url = await get_user_info(user_id, chat_id)
     last_message = await get_latest_message_by_chat_id(chat_id)
+    chat_object = await get_chat_by_id(chat_id)
 
-    if not await get_chat_by_id(chat_id):
+    if not chat_object:
+        logger.info("[Logic] Чат отсутствует")
         thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')
         await send_alert(f"Создан новый чат\nКлиент: {user_name}\nСсылка на клиента: {user_url}\n"
                          f"Объявление: {ad_url}\nСсылка на чат: {chat_url}\n", thread_id)
         await create_chat(chat_id, thread_id, author_id, user_id, chat_url)
-        logger.info(f'Новый чат {chat_id} создан')
 
-    chat_object = await get_chat_by_id(chat_id)
     if chat_object.under_assistant is False:
         logger.info(f'Чат бот отключен в чате {chat_id} для юзера {user_id}')
         return None
@@ -79,6 +80,7 @@ async def process_and_send_response(message: WebhookRequest):
         return None
 
     response = await process_message(author_id, user_id, chat_id, message_text, ad_url, user_name, chat_url)
+
     if response:
         logger.info(f"Ответ: {response}")
         await send_message(user_id, chat_id, response)

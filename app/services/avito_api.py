@@ -60,7 +60,7 @@ async def send_message(user_id: int, chat_id: str, text: str) -> None:
 
 async def get_ad(user_id: int, item_id: int) -> str:
     """Получение информации об объявлении"""
-    logger.info(f"Запрос информации об объявлении для пользователя {user_id}, item_id {item_id}")
+    logger.info(f"[API] Запрос информации об объявлении для пользователя {user_id}, item_id {item_id}")
     url = f"https://api.avito.ru/core/v1/accounts/{user_id}/items/{item_id}/"
     headers = {
         "Authorization": f"Bearer {await get_avito_token()}",
@@ -72,15 +72,15 @@ async def get_ad(user_id: int, item_id: int) -> str:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             ad_url = response.json().get("url", "")
-            logger.info(f"Информация об объявлении получена: {ad_url}")
+            logger.info(f"API] Информация об объявлении получена: {ad_url}")
             return ad_url
     except httpx.RequestError as e:
-        logger.error(f"Ошибка при получении информации об объявлении: {e}")
+        logger.error(f"API] Ошибка при получении информации об объявлении: {e}")
         raise
 
 async def get_user_info(user_id, chat_id):
     """Получение информации о чате, а через него о клиенте"""
-    logger.info(f"Запрос информации о чате для пользователя {user_id}, chat_id {chat_id}")
+    logger.info(f"[API] Запрос информации о чате для пользователя {user_id}, chat_id {chat_id}")
     url = f"https://api.avito.ru/messenger/v2/accounts/{user_id}/chats/{chat_id}"
     headers = {
         "Authorization": f"Bearer {await get_avito_token()}",
@@ -92,9 +92,9 @@ async def get_user_info(user_id, chat_id):
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             user_info = response.json()
-            logger.info(f"Информация о пользователе получена: {user_info}")
+            logger.info(f"[API] Информация о пользователе получена: {user_info}")
     except httpx.RequestError as e:
-        logger.error(f"Ошибка при получении информации о пользователе: {e}")
+        logger.error(f"[API] Ошибка при получении информации о пользователе: {e}")
         return None, None
 
     # Получаем первый элемент списка для имени и URL

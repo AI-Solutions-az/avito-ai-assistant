@@ -17,16 +17,14 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Асинхронная генерация ответа на сообщение клиента
 async def process_message(client_id: str, user_id:str, chat_id: str, message: str, ad_url: str, client_name:str, chat_url:str):
-    logger.info(f"3.1. Получено сообщение от клиента {client_id}: {message}")
-    logger.info("3.2. Получение информации по объявлению из базы знаний")
-
+    logger.info(f"[Logic] Старт обработки сообщения в чате {chat_id}")
     # Получение информации об объявлении
+    logger.info(f"[Logic] Получение информации по url {ad_url}")
     data = await fetch_google_sheet_stock(ad_url)
 
     # Выключаем бота, если не нашли объявление в базе знаний и отправляем уведомление об этом
     if not data:
-        await send_alert()
-        logger.warning("3.2.1. Объявление не найдено в базе знаний")
+        logger.warning(f"[Logic] Объявление не найдено в базе знаний {chat_id}")
         return None
 
     # Получение наименования позиции
@@ -36,7 +34,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
     good_name = stock.get('name')
 
     # Асинхронное получение базы знаний
-    logger.info("3.3. Получение информации по кейсам из базы знаний")
+    logger.info(f"[Logic] Получение информации по кейсам из базы знаний для {chat_id}")
     knowledge_base = await get_knowledge_base()
 
     # Добавление сообщения от пользователя в историю
@@ -58,7 +56,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
 
     messages = [instructions] + history
 
-    logger.info("3.4. Отправка запроса в ChatGPT")
+    logger.info(f"Отправка запроса в ChatGPT для {chat_id}")
 
     # Асинхронный запрос к ChatGPT
     async with httpx.AsyncClient() as client:
@@ -123,12 +121,12 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
 
         # Проверка был ли вызов инструмента
         if finish_reason == 'tool_calls':
-            logger.info("3.5. Произошел вызов инструмента")
+            logger.info(f"Произошел вызов инструмента в чате {chat_id}")
             tool_call = response.json()['choices'][0]['message']['tool_calls'][0]
             name = tool_call['function']['name']
 
             if name == 'initiate_return':
-                logger.info("3.6. Инициирован возврат")
+                logger.info(f"Инициирован возврат в чате {chat_id}")
                 arguments = json.loads(tool_call['function']['arguments'])
                 date_of_order = arguments.get("date_of_order")
                 reason = arguments.get("reason")
@@ -154,13 +152,13 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                     json={"model": "gpt-4o-mini", "messages": messages}
                 )
                 reply = response.json()['choices'][0]['message']['content']
-                logger.info("3.7. Сохранение ответа модели в истории редис после ВОЗВРАТА")
+                logger.info(f"Сохранение ответа модели в истории редис после ВОЗВРАТА для чата {chat_id}")
                 await save_message(client_id, chat_id, "developer", reply)
                 await create_message(chat_id, user_id, from_assistant=True, message=reply)
                 return reply
 
             if name == 'create_order':
-                logger.info("3.6. Произошел вызов инструмента СОЗДАТЬ ЗАКАЗ")
+                logger.info(f"Произошел вызов инструмента СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
                 arguments = json.loads(tool_call['function']['arguments'])
                 size = arguments.get("size")
                 color = arguments.get("color")
@@ -186,14 +184,14 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                     json={"model": "gpt-4o-mini", "messages": messages}
                 )
                 reply = response.json()['choices'][0]['message']['content']
-                logger.info("3.8. Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ")
+                logger.info(f"Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
                 await save_message(client_id, chat_id, "developer", reply)
                 await create_message(chat_id, user_id, from_assistant=True, message=reply)
 
                 return reply
 
             if name == 'escalation':
-                logger.info("3.6. Произошел вызов инструмента ЭСКАЛАЦИЯ")
+                logger.info(f"Произошел вызов инструмента ЭСКАЛАЦИЯ для чата {chat_id}")
                 arguments = json.loads(tool_call['function']['arguments'])
                 reason = arguments.get("reason")
 
@@ -218,7 +216,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                     json={"model": "gpt-4o-mini", "messages": messages}
                 )
                 reply = response.json()['choices'][0]['message']['content']
-                logger.info("3.8. Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ")
+                logger.info(f"Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
                 await save_message(client_id, chat_id, "developer", reply)
                 await create_message(chat_id, user_id, from_assistant=True, message=reply)
 
@@ -226,7 +224,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
 
 
         reply = response.json()['choices'][0]['message']['content']
-        logger.info("3.9. Сохранение ответа модели в редис")
+        logger.info(f"Сохранение ответа модели в редис для чата {chat_id}")
         await save_message(client_id, chat_id, "developer", reply)
         await create_message(chat_id, user_id, from_assistant=True, message=reply)
 

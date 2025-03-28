@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 Base = declarative_base()
 
 # Создаем асинхронный движок
-engine = create_async_engine(DATABASE_URL, future=True, echo=True)
+engine = create_async_engine(DATABASE_URL, future=True, echo=False)
 
 # Создаем фабрику сессий
 SessionLocal = sessionmaker(
