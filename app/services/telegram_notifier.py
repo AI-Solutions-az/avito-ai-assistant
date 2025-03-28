@@ -24,14 +24,3 @@ async def create_telegram_forum_topic(topic_name: str):
         logger.error(f"❌ Ошибка при создании топика: {e}")
         raise
 
-
-# ✅ Получение последнего thread_id
-async def get_telegram_updates():
-    try:
-        updates = await bot.get_updates()
-        for update in updates:
-            if update.message and update.message.message_thread_id:
-                return update.message.message_thread_id
-        logger.info("Не найден thread_id в сообщении.")
-    except Exception as e:
-        logger.error(f"❌ Ошибка при получении обновлений: {e}")

@@ -32,11 +32,7 @@ async def process_and_send_response(message: WebhookRequest):
     # Проверка существования чата с пользователем в БД
     if not await get_chat_by_id(chat_id):
         # Создание топика в телеграм
-        await create_telegram_forum_topic(f'{user_name}, {item_id}')
-        # Пауза, чтоб успели апдейты подтянуться в телегу
-        await asyncio.sleep(2)
-        # Получение номера топика
-        thread_id = await get_telegram_updates()
+        thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')
         # Засылаем все ссылки сразу в чат
         await send_alert("Создан новый чат\n"
                          f"Клиент: {user_name}\n"
