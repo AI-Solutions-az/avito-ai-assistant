@@ -1,6 +1,6 @@
-from aiogram.types import Message, ForumTopicCreated
+from aiogram.types import ForumTopicCreated
 from app.services.logs import logger
-from app.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from app.config import TELEGRAM_CHAT_ID
 from app.services.telegram_bot import bot
 
 # ✅ Отправка сообщения в чат
