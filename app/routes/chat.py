@@ -62,10 +62,9 @@ async def process_and_send_response(message: WebhookRequest):
     if not chat_object:
         logger.info("[Logic] Чат отсутствует")
         thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')
+        await create_chat(chat_id, thread_id, author_id, user_id, chat_url)
         await send_alert(f"Создан новый чат\nКлиент: {user_name}\nСсылка на клиента: {user_url}\n"
                          f"Объявление: {ad_url}\nСсылка на чат: {chat_url}\n", thread_id)
-        await create_chat(chat_id, thread_id, author_id, user_id, chat_url)
-
     if chat_object.under_assistant is False:
         logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
         return None
