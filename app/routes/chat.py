@@ -6,7 +6,7 @@ from app.services.gpt import process_message
 from app.services.telegram_notifier import send_alert
 from app.services.logs import logger
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
-from app.services.telegram_notifier import create_telegram_forum_topic, get_telegram_updates
+from app.services.telegram_notifier import create_telegram_forum_topic
 from db.messages_crud import get_latest_message_by_chat_id
 import asyncio
 
