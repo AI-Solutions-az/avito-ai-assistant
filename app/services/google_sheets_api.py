@@ -109,7 +109,7 @@ async def get_knowledge_base():
             data = response.json()
 
             if "values" not in data or not data["values"]:
-                logger.error("Ошибка: данные не найдены")
+                logger.error("[DB] Ошибка: данные не найдены")
                 return
 
             result = []
@@ -122,5 +122,5 @@ async def get_knowledge_base():
 
             return json.dumps(result, ensure_ascii=False, indent=2)
         except httpx.RequestError as e:
-            logger.error(f"Ошибка при запросе: {e}")
+            logger.error(f"[DB] Ошибка при запросе: {e}")
             return None

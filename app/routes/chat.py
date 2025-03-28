@@ -67,27 +67,27 @@ async def process_and_send_response(message: WebhookRequest):
         await create_chat(chat_id, thread_id, author_id, user_id, chat_url)
 
     if chat_object.under_assistant is False:
-        logger.info(f'Чат бот отключен в чате {chat_id} для юзера {user_id}')
+        logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
         return None
 
     if user_id == author_id:
         if last_message == message_text:
-            logger.info(f'Хук на собственное сообщение в чате {chat_id}')
+            logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
         else:
             await update_chat(chat_id=chat_id, under_assistant=False)
             await send_alert("❗️К чату подключился оператор", chat_object.thread_id)
-            logger.info(f'К чату {chat_id} подключился оператор')
+            logger.info(f'[Logic] К чату {chat_id} подключился оператор')
         return None
 
     response = await process_message(author_id, user_id, chat_id, message_text, ad_url, user_name, chat_url)
 
     if response:
-        logger.info(f"Ответ: {response}")
+        logger.info(f"[Logic] Ответ: {response}")
         await send_message(user_id, chat_id, response)
         await send_alert(f"💁‍♂️ {user_name}: {message_text}\n🤖 Бот: {response}\n_____\n\n",
                          thread_id=chat_object.thread_id)
     else:
-        logger.error('Не получен ответ от модели')
+        logger.error('[Logic] Не получен ответ от модели')
 
 
 @router.post("/chat")

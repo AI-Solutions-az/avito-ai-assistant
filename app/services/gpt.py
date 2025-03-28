@@ -56,7 +56,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
 
     messages = [instructions] + history
 
-    logger.info(f"Отправка запроса в ChatGPT для {chat_id}")
+    logger.info(f"[Logic] Отправка запроса в ChatGPT для {chat_id}")
 
     # Асинхронный запрос к ChatGPT
     async with httpx.AsyncClient() as client:
@@ -121,12 +121,12 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
 
         # Проверка был ли вызов инструмента
         if finish_reason == 'tool_calls':
-            logger.info(f"Произошел вызов инструмента в чате {chat_id}")
+            logger.info(f"[Logic] Произошел вызов инструмента в чате {chat_id}")
             tool_call = response.json()['choices'][0]['message']['tool_calls'][0]
             name = tool_call['function']['name']
 
             if name == 'initiate_return':
-                logger.info(f"Инициирован возврат в чате {chat_id}")
+                logger.info(f"[Logic] Инициирован возврат в чате {chat_id}")
                 arguments = json.loads(tool_call['function']['arguments'])
                 date_of_order = arguments.get("date_of_order")
                 reason = arguments.get("reason")
@@ -152,13 +152,13 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                     json={"model": "gpt-4o-mini", "messages": messages}
                 )
                 reply = response.json()['choices'][0]['message']['content']
-                logger.info(f"Сохранение ответа модели в истории редис после ВОЗВРАТА для чата {chat_id}")
+                logger.info(f"[Logic] Сохранение ответа модели в истории редис после ВОЗВРАТА для чата {chat_id}")
                 await save_message(client_id, chat_id, "developer", reply)
                 await create_message(chat_id, user_id, from_assistant=True, message=reply)
                 return reply
 
             if name == 'create_order':
-                logger.info(f"Произошел вызов инструмента СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
+                logger.info(f"[Logic] Произошел вызов инструмента СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
                 arguments = json.loads(tool_call['function']['arguments'])
                 size = arguments.get("size")
                 color = arguments.get("color")
@@ -184,14 +184,14 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                     json={"model": "gpt-4o-mini", "messages": messages}
                 )
                 reply = response.json()['choices'][0]['message']['content']
-                logger.info(f"Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
+                logger.info(f"[Logic] Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
                 await save_message(client_id, chat_id, "developer", reply)
                 await create_message(chat_id, user_id, from_assistant=True, message=reply)
 
                 return reply
 
             if name == 'escalation':
-                logger.info(f"Произошел вызов инструмента ЭСКАЛАЦИЯ для чата {chat_id}")
+                logger.info(f"[Logic] Произошел вызов инструмента ЭСКАЛАЦИЯ для чата {chat_id}")
                 arguments = json.loads(tool_call['function']['arguments'])
                 reason = arguments.get("reason")
 
@@ -216,7 +216,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                     json={"model": "gpt-4o-mini", "messages": messages}
                 )
                 reply = response.json()['choices'][0]['message']['content']
-                logger.info(f"Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
+                logger.info(f"[Logic] Сохранение ответа модели в истории редис после СОЗДАТЬ ЗАКАЗ для чата {chat_id}")
                 await save_message(client_id, chat_id, "developer", reply)
                 await create_message(chat_id, user_id, from_assistant=True, message=reply)
 
@@ -224,7 +224,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
 
 
         reply = response.json()['choices'][0]['message']['content']
-        logger.info(f"Сохранение ответа модели в редис для чата {chat_id}")
+        logger.info(f"[Logic] Сохранение ответа модели в редис для чата {chat_id}")
         await save_message(client_id, chat_id, "developer", reply)
         await create_message(chat_id, user_id, from_assistant=True, message=reply)
 

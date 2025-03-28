@@ -7,12 +7,12 @@ from app.services.telegram_bot import bot
 
 # ✅ Отправка сообщения в чат
 async def send_alert(message: str, thread_id: int):
-    logger.info(f"Отправка уведомления в телеграм по треду {thread_id}")
+    logger.info(f"[API] Отправка уведомления в телеграм по треду {thread_id}")
     try:
         await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, message_thread_id=thread_id)
-        logger.info("✅ Уведомление успешно отправлено в Telegram")
+        logger.info("[API] ✅ Уведомление успешно отправлено в Telegram")
     except Exception as e:
-        logger.error(f"❌ Ошибка при отправке уведомления в Telegram: {e}")
+        logger.error(f"[API] ❌ Ошибка при отправке уведомления в Telegram: {e}")
         raise
 
 
