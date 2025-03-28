@@ -26,8 +26,10 @@ async def message_collector(chat_id, message: WebhookRequest):
 
     # Если уже запущена задача обработки, выходим
     if queue.qsize() > 1:
+        logger.info(f"[Queue] В очереди уже есть сообщения для {chat_id}, пропускаем ожидание")
         return
 
+    logger.info(f"[Queue] Начинаю ожидание 8 секунд для {chat_id}")
     await asyncio.sleep(8)  # Ждем 8 секунд
 
     messages = []
@@ -56,6 +58,7 @@ async def process_and_send_response(message: WebhookRequest):
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
     ad_url = await get_ad(user_id, item_id)
     user_name, user_url = await get_user_info(user_id, chat_id)
+    # TODO добавить тут таймаут в две секунды, чтобы клиент получил ответ. Есть предположение, что последнее сообщение не успевает вставиться в БД
     last_message = await get_latest_message_by_chat_id(chat_id)
 
     if not await get_chat_by_id(chat_id):
