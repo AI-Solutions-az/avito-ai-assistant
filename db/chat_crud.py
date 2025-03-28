@@ -75,3 +75,24 @@ async def delete_chat(chat_id):
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при удалении чата: {e}")
             await session.rollback()
+
+
+async def update_chat_by_thread(thread_id: int, under_assistant: bool) -> None:
+    """Обновляет информацию о чате в БД по thread_id."""
+    async with SessionLocal() as session:
+        try:
+            result = await session.execute(select(Chat).where(Chat.thread_id == thread_id).limit(1))
+            chat = result.scalars().first()
+
+            if chat:
+                chat.under_assistant = under_assistant
+                chat.updated_at = datetime.datetime.now()
+
+                await session.commit()
+                logger.info(f"Чат {thread_id} обновлен: under_assistant={under_assistant}")
+            else:
+                logger.warning(f"Чат с thread_id={thread_id} не найден в базе данных")
+
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка обновления чата {thread_id}: {e}")
+            await session.rollback()

@@ -2,8 +2,19 @@ from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.routes import chat
 from app.services.logs import logger
+from contextlib import asynccontextmanager
+import asyncio
+from app.services.telegram_bot import start_bot
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Фоновый запуск бота при старте FastAPI"""
+    bot_task = asyncio.create_task(start_bot())  # Запускаем бота в фоне
+    logger.info("FastAPI приложение запущено!")
+    yield  # Ждем завершения приложения
+    bot_task.cancel()  # Завершаем бота при выключении FastAPI
+
+app = FastAPI(lifespan=lifespan)
 
 
 class LogRequestMiddleware(BaseHTTPMiddleware):
@@ -22,7 +33,6 @@ app.add_middleware(LogRequestMiddleware)
 
 # Подключаем маршруты
 app.include_router(chat.router, tags=["Chat"])
-
 
 @app.get("/")
 async def read_root():

@@ -1,72 +1,35 @@
-import httpx
+from aiogram import Bot, Dispatcher
+from aiogram.filters import Command
+from aiogram.types import Message
+
+from app.config import TELEGRAM_BOT_TOKEN
 from app.services.logs import logger
-from app.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from db.chat_crud import update_chat_by_thread
 
-# Отправка сообщения в чат
-async def send_alert(message, thread_id):
-    logger.info(f"Отправка уведомления в Telegram: {message}")
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    data = {"chat_id": TELEGRAM_CHAT_ID, "message_thread_id": thread_id, "text": message}
+async def turn_on(message: Message) -> None:
+    """Команда /turn_on — подключает бота к диалогу."""
+    thread_id = message.message_thread_id
+    await update_chat_by_thread(thread_id, True)
+    await message.answer("Бот подключен к диалогу")
 
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, data=data)
-            response.raise_for_status()
-            logger.info("Уведомление успешно отправлено в Telegram")
-        except httpx.RequestError as e:
-            logger.error(f"Ошибка при отправке уведомления в Telegram: {e}")
-            raise
+async def turn_off(message: Message) -> None:
+    """Команда /turn_off — отключает бота от диалога."""
+    thread_id = message.message_thread_id
+    await update_chat_by_thread(thread_id, False)
+    await message.answer("Бот отключен от диалога")
 
+async def start_bot() -> None:
+    """Запуск бота."""
+    await bot.delete_webhook(drop_pending_updates=True)
 
-# Асинхронная функция для создания форума
-async def create_telegram_forum_topic(topic_name):
-    url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/createForumTopic'
+    dp = Dispatcher()
+    dp.message.register(turn_on, Command(commands="turn_on"))
+    dp.message.register(turn_off, Command(commands="turn_off"))
 
-    # Параметры для создания топика
-    params = {
-        'chat_id': TELEGRAM_CHAT_ID,
-        'name': topic_name
-    }
-
-    async with httpx.AsyncClient() as client:
-        try:
-            # Отправка запроса
-            response = await client.post(url, data=params)
-
-            # Проверка ответа
-            if response.status_code == 200:
-                logger.info(f"Топик '{topic_name}' успешно создан!")
-            else:
-                logger.error(f"Ошибка при создании топика: {response.text}")
-        except httpx.RequestError as e:
-            logger.error(f"Ошибка при отправке запроса: {e}")
-
-
-async def get_telegram_updates():
-    url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates'
-
-    # Параметры для получения обновлений
-    params = {
-        'offset': -1,  # ID последнего обработанного сообщения (если нужно)
-        'limit': 5  # Количество сообщений для получения
-    }
-
-    async with httpx.AsyncClient() as client:
-        try:
-            # Отправка запроса
-            response = await client.get(url, params=params)
-
-            # Проверка ответа
-            if response.status_code == 200:
-                updates = response.json().get('result', [])
-                for update in updates:
-                    if 'message' in update and 'message_thread_id' in update['message']:
-                        thread_id = update['message']['message_thread_id']
-                        return thread_id
-                    else:
-                        logger.info("Не найден thread_id в сообщении.")
-            else:
-                logger.error(f"Ошибка при получении обновлений: {response.text}")
-        except httpx.RequestError as e:
-            logger.error(f"Ошибка при отправке запроса: {e}")
+    try:
+        logger.info("Бот запущен!")
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()

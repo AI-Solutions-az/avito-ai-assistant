@@ -3,7 +3,7 @@ import httpx
 from app.redis_db import save_message, get_history
 from app.config import prompt
 from app.services.google_sheets_api import fetch_google_sheet_stock, get_knowledge_base
-from app.services.telegram_bot import send_alert
+from app.services.telegram_notifier import send_alert
 from app.config import OPENAI_API_KEY
 from app.services.logs import logger
 from openai import OpenAI

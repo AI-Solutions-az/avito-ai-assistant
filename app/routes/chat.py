@@ -3,10 +3,10 @@ from fastapi.responses import JSONResponse
 from app.models.schemas import WebhookRequest
 from app.services.avito_api import send_message, get_ad, get_user_info
 from app.services.gpt import process_message
-from app.services.telegram_bot import send_alert
+from app.services.telegram_notifier import send_alert
 from app.services.logs import logger
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
-from app.services.telegram_bot import create_telegram_forum_topic, get_telegram_updates
+from app.services.telegram_notifier import create_telegram_forum_topic, get_telegram_updates
 from db.messages_crud import get_latest_message_by_chat_id
 
 router = APIRouter()

@@ -98,3 +98,18 @@ Restart=always <br>
 [Install] <br>
 WantedBy=multi-user.target
 
+`avito-admin-bot.service`
+
+
+[Unit]
+Description=Avito admin bot
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/root/avito-assistant-admin-bot
+ExecStart=/root/avito-assistant-admin-bot/venv/bin/python3.9 main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
