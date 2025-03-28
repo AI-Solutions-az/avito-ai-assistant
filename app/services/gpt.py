@@ -23,12 +23,13 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
     # Получение информации об объявлении
     data = await fetch_google_sheet_stock(ad_url)
 
-    # Получение наименования позиции
-    stock = json.loads(data)
     # Выключаем бота, если не нашли объявление в базе знаний и отправляем уведомление об этом
-    if not stock:
+    if not data:
         logger.warning("3.2.1. Объявление не найдено в базе знаний")
         return None
+
+    # Получение наименования позиции
+    stock = json.loads(data)
 
     # Получаем имя товара
     good_name = stock.get('name')
