@@ -8,6 +8,7 @@ from app.services.logs import logger
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_notifier import create_telegram_forum_topic, get_telegram_updates
 from db.messages_crud import get_latest_message_by_chat_id
+import asyncio
 
 router = APIRouter()
 
@@ -32,6 +33,8 @@ async def process_and_send_response(message: WebhookRequest):
     if not await get_chat_by_id(chat_id):
         # Создание топика в телеграм
         await create_telegram_forum_topic(f'{user_name}, {item_id}')
+        # Пауза, чтоб успели апдейты подтянуться в телегу
+        await asyncio.sleep(2)
         # Получение номера топика
         thread_id = await get_telegram_updates()
         # Засылаем все ссылки сразу в чат
