@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram.types import ForumTopicCreated
 from app.services.logs import logger
 from app.config import TELEGRAM_CHAT_ID
@@ -17,10 +19,7 @@ async def send_alert(message: str, thread_id: int):
 async def create_telegram_forum_topic(topic_name: str):
     try:
         response = await bot.create_forum_topic(chat_id=TELEGRAM_CHAT_ID, name=topic_name)
-        if isinstance(response, ForumTopicCreated):
-            logger.info(f"✅ Топик '{topic_name}' успешно создан!")
-            return response.message_thread_id  # Возвращаем thread_id созданного топика
+        return response.message_thread_id  # Возвращаем thread_id созданного топика
     except Exception as e:
         logger.error(f"❌ Ошибка при создании топика: {e}")
         raise
-
