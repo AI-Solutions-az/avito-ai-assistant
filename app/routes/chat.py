@@ -17,10 +17,25 @@ message_queues = {}
 processing_tasks = {}
 
 
-async def message_collector(message: WebhookRequest):
-    """ Добавляет сообщение в очередь и сбрасывает таймер ожидания """
-    chat_id = message.payload.value.chat_id
-    if message.payload.value.chat_id not in message_queues:
+async def message_collector(chat_id, message: WebhookRequest):
+    """ Обрабатывает только сообщения от клиентов. """
+    user_id = message.payload.value.user_id
+    author_id = message.payload.value.author_id
+
+    # Если сообщение не от клиента (user_id == author_id), проверяем, кто отправил
+    if user_id == author_id:
+        last_message = await get_latest_message_by_chat_id(chat_id)
+
+        if last_message == message.payload.value.content.text:
+            logger.info(f'[Logic] Игнорируем повторное сообщение от бота в чате {chat_id}')
+        else:
+            await update_chat(chat_id=chat_id, under_assistant=False)
+            await send_alert("❗️К чату подключился оператор", chat_id)
+            logger.info(f'[Logic] К чату {chat_id} подключился оператор')
+        return
+
+    # Обрабатываем только клиентские сообщения
+    if chat_id not in message_queues:
         message_queues[chat_id] = asyncio.Queue()
 
     queue = message_queues[chat_id]
@@ -72,7 +87,6 @@ async def process_and_send_response(message: WebhookRequest):
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
     ad_url = await get_ad(user_id, item_id)
     user_name, user_url = await get_user_info(user_id, chat_id)
-    last_message = await get_latest_message_by_chat_id(chat_id)
 
     if not await get_chat_by_id(chat_id):
         logger.info(f"[Logic] Чат {chat_id} отсутствует")
@@ -86,15 +100,6 @@ async def process_and_send_response(message: WebhookRequest):
 
     if chat_object.under_assistant is False:
         logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
-        return None
-
-    if user_id == author_id:
-        if last_message == message_text:
-            logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
-        else:
-            await update_chat(chat_id=chat_id, under_assistant=False)
-            await send_alert("❗️К чату подключился оператор", chat_object.thread_id)
-            logger.info(f'[Logic] К чату {chat_id} подключился оператор')
         return None
 
     response = await process_message(author_id, user_id, chat_id, message_text, ad_url, user_name, chat_url)
@@ -112,5 +117,6 @@ async def process_and_send_response(message: WebhookRequest):
 @router.post("/chat")
 async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     """ Принимает сообщение и добавляет его в очередь обработки """
-    background_tasks.add_task(message_collector, message)
+    chat_id = message.payload.value.chat_id
+    background_tasks.add_task(message_collector, chat_id, message)
     return JSONResponse(content={"ok": True}, status_code=200)
