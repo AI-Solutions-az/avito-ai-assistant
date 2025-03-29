@@ -115,14 +115,14 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                     {
                         "type": "function",
                         "function": {
-                            "name": "size_and_color_selection",
+                            "name": "size_selection",
                             "description": "Based on client's height, weight and size chart, select the appropriate size of the product not taking into account the availability of goods",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
                                     "size": {"type": "string", "description": "appropriate size of the good"},
                                 },
-                                "required": ["size", "color"]
+                                "required": ["size"]
                             }
                         },
                     }
