@@ -47,7 +47,7 @@ async def send_message(user_id: int, chat_id: str, text: str) -> None:
         "Authorization": f"Bearer {await get_avito_token()}",
         "Content-Type": "application/json"
     }
-    payload = {"message": {"text": text}, "type": "system"}
+    payload = {"message": {"text": text}, "type": "text"}
 
     try:
         async with httpx.AsyncClient() as client:
@@ -108,3 +108,6 @@ async def get_user_info(user_id, chat_id):
         logger.info("URL не найден")
 
     return user_name, user_url
+
+
+asyncio.run(send_message('170889787', 'u2i-zQUnZj8hbbxSb4WpqfyD5A', 'test'))
