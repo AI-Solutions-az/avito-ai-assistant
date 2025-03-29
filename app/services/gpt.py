@@ -116,7 +116,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                         "type": "function",
                         "function": {
                             "name": "size_selection",
-                            "description": "Based on client's height, weight and size chart, select the appropriate size of the product not taking into account the availability of goods",
+                            "description": "Client have sent height and weight",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
