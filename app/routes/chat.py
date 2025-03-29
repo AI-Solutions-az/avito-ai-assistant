@@ -94,7 +94,7 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
     logger.info(f'[Logic] Обработка запроса от {chat_id}')
 
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
-    response = await process_message(combined_message, author_id, user_id, chat_id, ad_url, user_name, chat_url)
+    response = await process_message(client_id=author_id, user_id=user_id, chat_id=chat_id, message=combined_message, ad_url=ad_url, client_name=user_name, chat_url=chat_url)
 
     if response:
         logger.info(f"[Logic] Чат {chat_id}\n"
