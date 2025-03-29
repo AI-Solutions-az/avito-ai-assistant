@@ -14,7 +14,7 @@ router = APIRouter()
 
 # Очередь сообщений
 message_queues = {}
-processing_locks = {}  # Флаги обработки для каждого чата
+processing_tasks = {}  # Храним задачи ожидания
 
 
 async def message_collector(chat_id, message: WebhookRequest):
@@ -25,14 +25,23 @@ async def message_collector(chat_id, message: WebhookRequest):
     queue = message_queues[chat_id]
     await queue.put(message)
 
-    if chat_id in processing_locks and processing_locks[chat_id]:
-        logger.info(f"[Queue] Уже идет обработка сообщений для {chat_id}, новые сообщения добавлены в очередь")
-        return
+    # Отменяем предыдущий таймер, если он был
+    if chat_id in processing_tasks and not processing_tasks[chat_id].done():
+        processing_tasks[chat_id].cancel()
+        logger.info(f"[Queue] Сбрасываем таймер ожидания для {chat_id}")
 
-    processing_locks[chat_id] = True
+    # Запускаем новый таймер ожидания
+    processing_tasks[chat_id] = asyncio.create_task(process_queue_after_delay(chat_id))
 
+
+async def process_queue_after_delay(chat_id):
+    """ Ждет 8 секунд, затем обрабатывает сообщения из очереди """
     logger.info(f"[Queue] Начинаю ожидание 8 секунд для {chat_id}")
     await asyncio.sleep(8)
+
+    queue = message_queues.get(chat_id)
+    if not queue:
+        return
 
     messages = []
     while not queue.empty():
@@ -46,8 +55,6 @@ async def message_collector(chat_id, message: WebhookRequest):
 
     # Отправляем на обработку
     await process_and_send_response(messages[-1])
-
-    processing_locks[chat_id] = False
 
 
 async def process_and_send_response(message: WebhookRequest):
