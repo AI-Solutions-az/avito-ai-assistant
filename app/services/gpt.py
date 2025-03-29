@@ -111,6 +111,20 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                                 "required": ["reason"]
                             }
                         },
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "size_and_color_selection",
+                            "description": "Based on client's height, weight and size chart, select the appropriate size of the product not taking into account the availability of goods",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "size": {"type": "string", "description": "appropriate size of the good"},
+                                },
+                                "required": ["size", "color"]
+                            }
+                        },
                     }
                 ],
                 "tool_choice": "auto"
@@ -124,6 +138,36 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
             logger.info(f"[Logic] Произошел вызов инструмента в чате {chat_id}")
             tool_call = response.json()['choices'][0]['message']['tool_calls'][0]
             name = tool_call['function']['name']
+
+            if name == 'size_and_color_selection':
+                logger.info(f"[Logic] Инициировано определение подходящего размера в чате {chat_id}")
+                arguments = json.loads(tool_call['function']['arguments'])
+                size = arguments.get("size")
+
+                # Генерация ответа пользователю
+                instructions = {
+                    "role": "developer",
+                    "content": f"{prompt}\n"
+                               f"# INFORMATION: {stock}\n"
+                               f"# COMMON QUESTIONS: {knowledge_base}\n"
+                               f"The right size for the client is {size}."
+                               f"If size {size} is available on stock, then inform the client about it, indicating the available colors and offering to place an order."
+                               f"If there is no size {size}, then select for the client one or several closest sizes available in the warehouse."
+                               f"In this case, if the available size is larger than {size}, then highlight to the client that the product will fit loosely, and if the available size is smaller than {size}, then highlight to the client that the product will fit tightly"
+                               f"History of chat, where messages from developer are your previous messages:"
+                }
+                messages = [instructions] + history
+
+                response = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+                    json={"model": "gpt-4o-mini", "messages": messages}
+                )
+                reply = response.json()['choices'][0]['message']['content']
+                logger.info(f"[Logic] Сохранение ответа модели в истории редис после ВОЗВРАТА для чата {chat_id}")
+                await save_message(client_id, chat_id, "developer", reply)
+                await create_message(chat_id, user_id, from_assistant=True, message=reply)
+                return reply
 
             if name == 'initiate_return':
                 logger.info(f"[Logic] Инициирован возврат в чате {chat_id}")
@@ -205,7 +249,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                 # Генерация ответа пользователю
                 instructions = {
                     "role": "developer",
-                    "content": f'Попроси у клиента прощения, что не смог помочь и сообщи, что уже позвал менеджера на помощь'
+                    "content": f'Сообщи клиенту, что позвал менеджера на помощь'
                 }
 
                 messages = [instructions] + history
