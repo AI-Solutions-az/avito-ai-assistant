@@ -139,7 +139,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
             tool_call = response.json()['choices'][0]['message']['tool_calls'][0]
             name = tool_call['function']['name']
 
-            if name == 'size_and_color_selection':
+            if name == 'size_selection':
                 logger.info(f"[Logic] Инициировано определение подходящего размера в чате {chat_id}")
                 arguments = json.loads(tool_call['function']['arguments'])
                 size = arguments.get("size")
