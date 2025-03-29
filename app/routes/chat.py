@@ -14,6 +14,7 @@ router = APIRouter()
 
 # Очередь сообщений
 message_queues = {}
+processing_locks = {}  # Флаги обработки для каждого чата
 
 
 async def message_collector(chat_id, message: WebhookRequest):
@@ -24,13 +25,14 @@ async def message_collector(chat_id, message: WebhookRequest):
     queue = message_queues[chat_id]
     await queue.put(message)
 
-    # Если уже запущена задача обработки, выходим
-    if queue.qsize() > 1:
-        logger.info(f"[Queue] В очереди уже есть сообщения для {chat_id}, пропускаем ожидание")
+    if chat_id in processing_locks and processing_locks[chat_id]:
+        logger.info(f"[Queue] Уже идет обработка сообщений для {chat_id}, новые сообщения добавлены в очередь")
         return
 
+    processing_locks[chat_id] = True
+
     logger.info(f"[Queue] Начинаю ожидание 8 секунд для {chat_id}")
-    await asyncio.sleep(8)  # Ждем 8 секунд
+    await asyncio.sleep(8)
 
     messages = []
     while not queue.empty():
@@ -45,10 +47,12 @@ async def message_collector(chat_id, message: WebhookRequest):
     # Отправляем на обработку
     await process_and_send_response(messages[-1])
 
+    processing_locks[chat_id] = False
+
 
 async def process_and_send_response(message: WebhookRequest):
     """ Обрабатывает сообщение и отправляет ответ """
-    logger.info(f'[Logic] Обработка запроса от {message.payload.value.author_id}')
+    logger.info(f'[Logic] Обработка запроса от {message.payload.value.chat_id}')
     message_text = message.payload.value.content.text
     chat_id = message.payload.value.chat_id
     user_id = message.payload.value.user_id
@@ -58,15 +62,15 @@ async def process_and_send_response(message: WebhookRequest):
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
     ad_url = await get_ad(user_id, item_id)
     user_name, user_url = await get_user_info(user_id, chat_id)
-    # TODO добавить тут таймаут в две секунды, чтобы клиент получил ответ. Есть предположение, что последнее сообщение не успевает вставиться в БД
     last_message = await get_latest_message_by_chat_id(chat_id)
 
     if not await get_chat_by_id(chat_id):
-        logger.info("[Logic] Чат отсутствует")
+        logger.info(f"[Logic] Чат {chat_id} отсутствует")
         thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')
         await create_chat(chat_id, thread_id, author_id, user_id, chat_url)
         await send_alert(f"Создан новый чат\nКлиент: {user_name}\nСсылка на клиента: {user_url}\n"
                          f"Объявление: {ad_url}\nСсылка на чат: {chat_url}\n", thread_id)
+        logger.info(f"[Logic] Создан новый чат {chat_id}")
 
     chat_object = await get_chat_by_id(chat_id)
 
@@ -86,12 +90,13 @@ async def process_and_send_response(message: WebhookRequest):
     response = await process_message(author_id, user_id, chat_id, message_text, ad_url, user_name, chat_url)
 
     if response:
-        logger.info(f"[Logic] Ответ: {response}")
+        logger.info(f"[Logic] Чат {chat_id}\n"
+                    f"Ответ модели: {response}")
         await send_message(user_id, chat_id, response)
         await send_alert(f"💁‍♂️ {user_name}: {message_text}\n🤖 Бот: {response}\n_____\n\n",
                          thread_id=chat_object.thread_id)
     else:
-        logger.error('[Logic] Не получен ответ от модели')
+        logger.error(f'[Logic] Не получен ответ от модели в чате {chat_id}')
 
 
 @router.post("/chat")
