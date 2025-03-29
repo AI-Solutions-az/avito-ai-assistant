@@ -147,9 +147,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                 # Генерация ответа пользователю
                 instructions = {
                     "role": "developer",
-                    "content": f"Send size chart only for goods available in stock!"
-                               f"The right size for the client is {size}.\n"
-                               f"Follow the next scenario:\n"
+                    "content": f"{prompt}\n"
                                f"If size {size} is available on stock, then inform the client about it, indicating the available colors and offering to place an order.\n"
                                f"If there is no size {size}, then select for the client one or several closest sizes available in the warehouse."
                                f"In this case, if the available size is larger than {size}, then highlight to the client that the product will fit loosely, and if the available size is smaller than {size}, then highlight to the client that the product will fit tightly\n"
