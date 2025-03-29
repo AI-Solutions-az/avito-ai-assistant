@@ -32,7 +32,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
 
     # Получаем имя товара
     good_name = stock.get('name')
-
+    logger.info(f"Сток {stock.get('current_stock')}")
     # Асинхронное получение базы знаний
     logger.info(f"[Logic] Получение информации по кейсам из базы знаний для {chat_id}")
     knowledge_base = await get_knowledge_base()
