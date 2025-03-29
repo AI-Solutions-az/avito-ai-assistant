@@ -41,7 +41,7 @@ async def message_collector(chat_id, message: WebhookRequest):
     if chat_object.under_assistant is False:
         logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
         return None
-
+    # Проверка тут, так как нельзя ставить очередь на собственное сообщение
     if user_id == author_id:
         last_message = await get_latest_message_by_chat_id(chat_id)
         if last_message == message_text:
