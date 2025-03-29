@@ -47,7 +47,7 @@ async def send_message(user_id: int, chat_id: str, text: str) -> None:
         "Authorization": f"Bearer {await get_avito_token()}",
         "Content-Type": "application/json"
     }
-    payload = {"message": {"text": text}, "type": "text"}
+    payload = {"message": {"text": text}, "type": "system"}
 
     try:
         async with httpx.AsyncClient() as client:
