@@ -25,11 +25,6 @@ async def message_collector(chat_id, message: WebhookRequest):
     queue = message_queues[chat_id]
     await queue.put(message)
 
-    # Отменяем предыдущий таймер, если он был
-    if chat_id in processing_tasks and not processing_tasks[chat_id].done():
-        processing_tasks[chat_id].cancel()
-        logger.info(f"[Queue] Сбрасываем таймер ожидания для {chat_id}")
-
     # Запускаем новый таймер ожидания
     processing_tasks[chat_id] = asyncio.create_task(process_queue_after_delay(chat_id))
 
