@@ -12,27 +12,35 @@ import asyncio
 
 router = APIRouter()
 
-# Очередь сообщений
+# Очередь сообщений и задачи ожидания
 message_queues = {}
-processing_tasks = {}  # Храним задачи ожидания
+processing_tasks = {}
 
 
-async def message_collector(chat_id, message: WebhookRequest):
-    """ Собирает сообщения для указанного чата и отправляет их на обработку разом """
-    if chat_id not in message_queues:
+async def message_collector(message: WebhookRequest):
+    """ Добавляет сообщение в очередь и сбрасывает таймер ожидания """
+    chat_id = message.payload.value.chat_id
+    if message.payload.value.chat_id not in message_queues:
         message_queues[chat_id] = asyncio.Queue()
 
     queue = message_queues[chat_id]
     await queue.put(message)
 
-    # Запускаем новый таймер ожидания
+    # Сбрасываем существующую задачу ожидания, если она есть
+    if chat_id in processing_tasks and not processing_tasks[chat_id].done():
+        processing_tasks[chat_id].cancel()
+
+    # Запускаем новый таймер
     processing_tasks[chat_id] = asyncio.create_task(process_queue_after_delay(chat_id))
 
 
 async def process_queue_after_delay(chat_id):
-    """ Ждет 8 секунд, затем обрабатывает сообщения из очереди """
-    logger.info(f"[Queue] Начинаю ожидание 8 секунд для {chat_id}")
-    await asyncio.sleep(8)
+    """ Ждет 8 секунд без новых сообщений, затем обрабатывает очередь """
+    try:
+        logger.info(f"[Queue] Ожидание 8 секунд для {chat_id}")
+        await asyncio.sleep(8)  # Ожидание без сброса
+    except asyncio.CancelledError:
+        return  # Таймер был сброшен новым сообщением
 
     queue = message_queues.get(chat_id)
     if not queue:
@@ -104,6 +112,5 @@ async def process_and_send_response(message: WebhookRequest):
 @router.post("/chat")
 async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     """ Принимает сообщение и добавляет его в очередь обработки """
-    chat_id = message.payload.value.chat_id
-    background_tasks.add_task(message_collector, chat_id, message)
+    background_tasks.add_task(message_collector, message)
     return JSONResponse(content={"ok": True}, status_code=200)
