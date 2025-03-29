@@ -108,6 +108,3 @@ async def get_user_info(user_id, chat_id):
         logger.info("URL не найден")
 
     return user_name, user_url
-
-
-asyncio.run(send_message('170889787', 'u2i-zQUnZj8hbbxSb4WpqfyD5A', 'test'))
