@@ -85,25 +85,22 @@ async def process_queue_after_delay(chat_id, author_id, user_id, message_text, a
     # Склеиваем все сообщения
     combined_message = " ".join(msg.payload.value.content.text for msg in messages)
 
-    # Обновляем текст последнего сообщения
-    messages[-1].payload.value.content.text = combined_message
-
     # Отправляем на обработку
-    await process_and_send_response(messages[-1], chat_id, author_id, user_id, message_text, ad_url, user_name, thread_id)
+    await process_and_send_response(combined_message, chat_id, author_id, user_id, ad_url, user_name, thread_id)
 
 
-async def process_and_send_response(message: WebhookRequest, chat_id, author_id, user_id, message_text, ad_url, user_name, thread_id):
+async def process_and_send_response(combined_message, chat_id, author_id, user_id, ad_url, user_name, thread_id):
     """ Обрабатывает сообщение и отправляет ответ """
-    logger.info(f'[Logic] Обработка запроса от {message.payload.value.chat_id}')
+    logger.info(f'[Logic] Обработка запроса от {chat_id}')
 
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
-    response = await process_message(author_id, user_id, chat_id, message_text, ad_url, user_name, chat_url)
+    response = await process_message(combined_message, author_id, user_id, chat_id, ad_url, user_name, chat_url)
 
     if response:
         logger.info(f"[Logic] Чат {chat_id}\n"
                     f"Ответ модели: {response}")
         await send_message(user_id, chat_id, response)
-        await send_alert(f"💁‍♂️ {user_name}: {message_text}\n🤖 Бот: {response}\n_____\n\n",
+        await send_alert(f"💁‍♂️ {user_name}: {combined_message}\n🤖 Бот: {response}\n_____\n\n",
                          thread_id=thread_id)
     else:
         logger.error(f'[Logic] Не получен ответ от модели в чате {chat_id}')
