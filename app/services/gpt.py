@@ -55,7 +55,6 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
         }
     ]
 
-    print(instructions)
     # Добавление сообщения от пользователя в историю
     await save_message(client_id, chat_id, "user", message)
 
