@@ -75,39 +75,8 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
                     {
                         "type": "function",
                         "function": {
-                            "name": "initiate_return",
-                            "description": "Get reason of return and order date",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "date_of_order": {"type": "string", "description": "Date when order is done"},
-                                    "reason": {"type": "string",
-                                               "description": "Reason why client want to return the good"}
-                                },
-                                "required": ["date_of_order", "reason"]
-                            }
-                        }
-                    },
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "create_order",
-                            "description": "Get size, color of good and get confirmation that client is ready to place an order",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "size": {"type": "string", "description": "Size of the good"},
-                                    "color": {"type": "string", "description": "Color of the good"}
-                                },
-                                "required": ["size", "color"]
-                            }
-                        },
-                    },
-                    {
-                        "type": "function",
-                        "function": {
                             "name": "escalation",
-                            "description": "Client want to be connected with manager of operator",
+                            "description": "Client want to be connected with manager of operator or asssitant cannot help to client",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
