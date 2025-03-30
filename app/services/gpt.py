@@ -37,24 +37,30 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
     logger.info(f"[Logic] Получение информации по кейсам из базы знаний для {chat_id}")
     knowledge_base = await get_knowledge_base()
 
-    # Добавление сообщения от пользователя в историю
-    await save_message(client_id, chat_id, "user", message)
-    # Добавление сообщения от пользователя в БД
-    await create_message(chat_id, client_id, from_assistant=False, message=message)
-
-    # Получение истории сообщений вместе с новым сообщением
+    # Получение истории сообщений вместе без нового сообщения
     history = await get_history(client_id, chat_id)
 
     # Инструкция бота
-    instructions = {
-        "role": "developer",
-        "content": f"{prompt}\n"
-                   f"# INFORMATION: {stock}\n"
-                   f"# COMMON QUESTIONS: {knowledge_base}\n"
-                   f"History of chat, where messages from developer are your previous messages:"
-    }
+    instructions = [
+        {
+            "role": "developer",
+            "content": f"{prompt}\n"
+                       f"# STOCK AVAILABILITY AND INFORMATION: {stock}\n"
+                       f"# COMMON QUESTIONS: {knowledge_base}\n"
+                       f"History of chat, where messages from developer are your previous messages:{history}"
+        },
+        {
+            "role": "user",
+            "content": f"{message}"
+        }
+    ]
 
-    messages = [instructions] + history
+    print(instructions)
+    # Добавление сообщения от пользователя в историю
+    await save_message(client_id, chat_id, "user", message)
+
+    # Добавление сообщения от пользователя в БД
+    await create_message(chat_id, client_id, from_assistant=False, message=message)
 
     logger.info(f"[Logic] Отправка запроса в ChatGPT для {chat_id}")
 
@@ -65,7 +71,7 @@ async def process_message(client_id: str, user_id:str, chat_id: str, message: st
             headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
             json={
                 "model": "gpt-4o-mini",
-                "messages": messages,
+                "messages": instructions,
                 "tools": [
                     {
                         "type": "function",
