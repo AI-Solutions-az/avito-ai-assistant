@@ -6,13 +6,15 @@ from contextlib import asynccontextmanager
 import asyncio
 from app.services.telegram_bot import start_bot
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Фоновый запуск бота при старте FastAPI"""
+    """Фоновый запуск бота при старте FastAPI и инициализация ассистента"""
     bot_task = asyncio.create_task(start_bot())  # Запускаем бота в фоне
     logger.info("FastAPI приложение запущено!")
     yield  # Ждем завершения приложения
     bot_task.cancel()  # Завершаем бота при выключении FastAPI
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -34,6 +36,8 @@ app.add_middleware(LogRequestMiddleware)
 # Подключаем маршруты
 app.include_router(chat.router, tags=["Chat"])
 
+
 @app.get("/")
 async def read_root():
-    return {"message": "AI Assistant is running!"}  # Эта функция уже асинхронная, так как FastAPI её по умолчанию обрабатывает асинхронно
+    return {
+        "message": "AI Assistant is running!"}  # Эта функция уже асинхронная, так как FastAPI её по умолчанию обрабатывает асинхронно

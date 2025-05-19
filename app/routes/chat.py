@@ -23,11 +23,16 @@ async def message_collector(chat_id, message: WebhookRequest):
     user_id = message.payload.value.user_id
     author_id = message.payload.value.author_id
     item_id = message.payload.value.item_id
-
+    # Создание ссылки на чат
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
+
+    # Получение ссылки на объявление, по которому было сообщение
     ad_url = await get_ad(user_id, item_id)
+
+    # Получение информации по пользователю
     user_name, user_url = await get_user_info(user_id, chat_id)
 
+    # Проверка существования чата в БД AIvito
     if not await get_chat_by_id(chat_id):
         logger.info(f"[Logic] Чат {chat_id} отсутствует")
         thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')

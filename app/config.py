@@ -9,6 +9,8 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
 
+OPENAI_ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")  # Add this line
+
 # Логи
 SOURCE_TOKEN=os.getenv("source_token")
 INGESTING_HOST=os.getenv("ingesting_host")
