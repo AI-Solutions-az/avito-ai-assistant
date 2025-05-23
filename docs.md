@@ -63,7 +63,7 @@ https://arc.net/l/quote/oxnxkssg <br>
 `curl -X POST "https://api.avito.ru/messenger/v3/webhook" \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer <TOKEN>" \
--d '{"url": "http://134.199.225.52:8000/chat"}'`
+-d '{"url": "http://45.95.235.182:8000/chat"}'`
 
 Получение информации об объявлении <br>
 `curl -X GET "https://api.avito.ru/core/v1/accounts/{user_id}/items/{item_id}/" \
@@ -74,7 +74,7 @@ https://arc.net/l/quote/oxnxkssg <br>
 `curl -X POST "https://api.avito.ru/messenger/v1/webhook/unsubscribe" \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer <TOKEN>" \
--d '{"url": "http://134.199.225.52:8000/chat"}'`
+-d '{"url": "http://45.95.235.182:8000/chat"}'`
 
 
 
