@@ -1,27 +1,19 @@
-# app/main.py - Updated version
-
 from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.routes import chat
-from app.routes import client_management  # NEW: Add client management routes
 from app.services.logs import logger
 from contextlib import asynccontextmanager
 import asyncio
 from app.services.telegram_bot import start_bot
-from app.services.client_telegram_notifier import cleanup_client_bots  # NEW: Cleanup function
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Background bot startup and cleanup"""
-    bot_task = asyncio.create_task(start_bot())
-    logger.info("FastAPI application started!")
-    yield  # Wait for application shutdown
-
-    # NEW: Cleanup client bot sessions
-    await cleanup_client_bots()
-    bot_task.cancel()
-    logger.info("FastAPI application shutdown complete!")
+    """Фоновый запуск бота при старте FastAPI и инициализация ассистента"""
+    bot_task = asyncio.create_task(start_bot())  # Запускаем бота в фоне
+    logger.info("FastAPI приложение запущено!")
+    yield  # Ждем завершения приложения
+    bot_task.cancel()  # Завершаем бота при выключении FastAPI
 
 
 app = FastAPI(lifespan=lifespan)
@@ -29,23 +21,23 @@ app = FastAPI(lifespan=lifespan)
 
 class LogRequestMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        body = await request.body()
+        body = await request.body()  # Асинхронное получение тела запроса
         logger.info(f"New request: {request.method} {request.url}")
         logger.info(f"Request body: {body.decode('utf-8')}")
 
-        response = await call_next(request)
+        response = await call_next(request)  # Асинхронный вызов следующего обработчика
         logger.info(f"Response: {response.status_code} {request.url}")
         return response
 
 
-# Add middleware
+# Добавление middleware в приложение
 app.add_middleware(LogRequestMiddleware)
 
-# Connect routes
+# Подключаем маршруты
 app.include_router(chat.router, tags=["Chat"])
-app.include_router(client_management.router, prefix="/api", tags=["Client Management"])  # NEW: Client management API
 
 
 @app.get("/")
 async def read_root():
-    return {"message": "AI Assistant with Multi-Client Support is running!"}
+    return {
+        "message": "AI Assistant is running!"}  # Эта функция уже асинхронная, так как FastAPI её по умолчанию обрабатывает асинхронно
