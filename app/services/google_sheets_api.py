@@ -4,7 +4,6 @@ from app.services.logs import logger
 from app.config import RANGE, SPREADSHEET_ID, WAREHOUSE_SHEET_NAME, KNOWLEDGE_BASE_SHEET_NAME, API_KEY
 
 
-
 async def fetch_google_sheet_stock(ad_url):
     '''
     Поиск строки с идентификатором объявления
@@ -67,32 +66,45 @@ async def parse_stock(data):
         headers = data[0]
         product_info = data[1]
 
+        # Функция для безопасного получения значения из списка
+        def safe_get(lst, index, default=''):
+            try:
+                return lst[index] if index < len(lst) else default
+            except (IndexError, TypeError):
+                return default
+
         product = {
-            'id': product_info[1],
-            'name': product_info[2],
-            'price': product_info[11],
-            'description': product_info[12],
-            'size_info': product_info[13],
-            'payment_method': product_info[14],
-            'delivery_method': product_info[15],
+            'id': safe_get(product_info, 1),
+            'name': safe_get(product_info, 2),
+            'price': safe_get(product_info, 11),
+            'description': safe_get(product_info, 12),
+            'size_info': safe_get(product_info, 13),
+            'payment_method': safe_get(product_info, 14),
+            'delivery_method': safe_get(product_info, 15),
             'current_stock': []
         }
 
         # Матрица цветов и размеров (столбцы с 5 по 11)
         for row in data[1:]:
-            color = row[4]
-            sizes = row[5:11]
-            # Если количество значений для размеров меньше 6, добавим пустые строки
-            if len(sizes) < 6:
-                sizes.extend([''] * (6 - len(sizes)))  # Дополняем до 6 элементов
+            color = safe_get(row, 4)
+            sizes = []
+
+            # Собираем размеры для текущей строки
+            for i in range(5, 11):
+                sizes.append(safe_get(row, i, ''))
+
+            # Убедимся, что у нас всегда 6 размеров
+            while len(sizes) < 6:
+                sizes.append('')
+
             product['current_stock'].append({
                 'color': color,
-                'sizes': {headers[i]: sizes[i - 5] for i in range(5, 11)}
+                'sizes': {safe_get(headers, i, f'Size{i - 4}'): sizes[i - 5] for i in range(5, 11)}
             })
 
         return json.dumps(product, ensure_ascii=False, indent=4)
     except Exception as e:
-        logger.error('Ошибка при парсинге строки из документа', e)
+        logger.error(f'Ошибка при парсинге строки из документа: {e}')
         return None
 
 
@@ -114,11 +126,20 @@ async def get_knowledge_base():
 
             result = []
             for row in data["values"]:
-                question_answer = {
-                    'question': row[0],  # Первый элемент строки - это вопрос
-                    'answer_example': row[1]  # Второй элемент строки - это ответ
-                }
-                result.append(question_answer)
+                # Проверяем, что в строке есть хотя бы 2 элемента
+                if len(row) >= 2:
+                    question_answer = {
+                        'question': row[0],  # Первый элемент строки - это вопрос
+                        'answer_example': row[1]  # Второй элемент строки - это ответ
+                    }
+                    result.append(question_answer)
+                elif len(row) == 1:
+                    # Если есть только вопрос без ответа
+                    question_answer = {
+                        'question': row[0],
+                        'answer_example': ''
+                    }
+                    result.append(question_answer)
 
             return json.dumps(result, ensure_ascii=False, indent=2)
         except httpx.RequestError as e:
