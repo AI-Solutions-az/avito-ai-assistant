@@ -6,13 +6,15 @@ from db.db_config import SessionLocal
 from sqlalchemy.future import select
 from app.services.logs import logger
 
-async def create_chat(chat_id, thread_id, client_id, user_id, chat_url, under_assistant=True):
+
+async def create_chat(chat_id, thread_id, client_id, user_id, chat_url, under_assistant=True, thread_id_openai=None):
     logger.info(f"[DB] Создание чата {chat_id}")
     async with SessionLocal() as session:
         try:
             new_chat = Chat(
                 chat_id=str(chat_id),
-                thread_id=thread_id,
+                thread_id=thread_id,  # Telegram thread ID
+                thread_id_openai=thread_id_openai,  # OpenAI thread ID
                 client_id=str(client_id),
                 user_id=str(user_id),
                 chat_url=chat_url,
@@ -28,6 +30,7 @@ async def create_chat(chat_id, thread_id, client_id, user_id, chat_url, under_as
             logger.error(f"Ошибка при добавлении чата в БД: {e}")
             await session.rollback()
 
+
 # Read
 async def get_chat_by_id(chat_id):
     logger.info(f"[DB] Получение информации по чату {chat_id}")
@@ -42,14 +45,16 @@ async def get_chat_by_id(chat_id):
             return None
 
 
-async def update_chat(chat_id, thread_id=None, client_id=None, user_id=None, under_assistant=None, chat_url=None):
+async def update_chat(chat_id, thread_id=None, thread_id_openai=None, client_id=None, user_id=None, under_assistant=None, chat_url=None):
     logger.info(f"Изменение чата {chat_id}")
     async with SessionLocal() as session:
         try:
             chat = await session.get(Chat, chat_id)  # Получаем объект внутри сессии
             if chat:
                 if thread_id is not None:
-                    chat.thread_id = thread_id
+                    chat.thread_id = thread_id  # Telegram thread ID
+                if thread_id_openai is not None:
+                    chat.thread_id_openai = thread_id_openai  # OpenAI thread ID
                 if client_id is not None:
                     chat.client_id = client_id
                 if user_id is not None:
@@ -83,7 +88,7 @@ async def delete_chat(chat_id):
 
 
 async def update_chat_by_thread(thread_id: int, under_assistant: bool) -> None:
-    """Обновляет информацию о чате в БД по thread_id."""
+    """Обновляет информацию о чате в БД по thread_id (Telegram thread ID)."""
     async with SessionLocal() as session:
         try:
             result = await session.execute(select(Chat).where(Chat.thread_id == thread_id).limit(1))

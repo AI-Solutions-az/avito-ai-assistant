@@ -1,4 +1,3 @@
-
 import json
 from app.config import OPENAI_API_KEY, OPENAI_ASSISTANT_ID, prompt
 from app.services.logs import logger
@@ -91,20 +90,20 @@ class AssistantManager:
 
             chat_object = await get_chat_by_id(chat_id)
 
-            if chat_object and hasattr(chat_object, 'thread_id') and chat_object.thread_id:
-                # Check if the thread_id is an OpenAI thread ID (starts with 'thread_')
-                if isinstance(chat_object.thread_id, str) and chat_object.thread_id.startswith('thread_'):
-                    logger.info(f"[Assistant] Using existing thread: {chat_object.thread_id}")
-                    return chat_object.thread_id
+            if chat_object and hasattr(chat_object, 'thread_id_openai') and chat_object.thread_id_openai:
+                # Check if the thread_id_openai is an OpenAI thread ID (starts with 'thread_')
+                if isinstance(chat_object.thread_id_openai, str) and chat_object.thread_id_openai.startswith('thread_'):
+                    logger.info(f"[Assistant] Using existing OpenAI thread: {chat_object.thread_id_openai}")
+                    return chat_object.thread_id_openai
 
-            # If no valid thread_id, create a new one
+            # If no valid thread_id_openai, create a new one
             thread = self.client.beta.threads.create()
-            logger.info(f"[Assistant] Created new thread: {thread.id}")
+            logger.info(f"[Assistant] Created new OpenAI thread: {thread.id}")
 
-            # Update the chat in the database with the new thread ID
+            # Update the chat in the database with the new OpenAI thread ID
             if chat_object:
-                await update_chat(chat_id=chat_id, thread_id=thread.id)
-                logger.info(f"[Assistant] Updated chat {chat_id} with thread {thread.id}")
+                await update_chat(chat_id=chat_id, thread_id_openai=thread.id)
+                logger.info(f"[Assistant] Updated chat {chat_id} with OpenAI thread {thread.id}")
 
             return thread.id
 
@@ -112,7 +111,7 @@ class AssistantManager:
             logger.error(f"[Assistant] Error getting/creating thread: {e}")
             # Create a new thread if there's an error
             thread = self.client.beta.threads.create()
-            logger.info(f"[Assistant] Created new thread: {thread.id}")
+            logger.info(f"[Assistant] Created new OpenAI thread: {thread.id}")
             return thread.id
 
     async def process_message(self, client_id, user_id, chat_id, message, ad_url, client_name, chat_url):
@@ -186,12 +185,17 @@ class AssistantManager:
                         # Create an escalation in the database
                         await create_escalation(chat_id, client_id, client_name, chat_url, reason)
 
+                        # Get the Telegram thread_id from the chat object
+                        from db.chat_crud import get_chat_by_id
+                        chat_object = await get_chat_by_id(chat_id)
+                        telegram_thread_id = chat_object.thread_id if chat_object else 0
+
                         # Notify via Telegram
                         from app.services.telegram_notifier import send_alert
                         await send_alert(f"❗️Требуется срочное внимание менеджера\n\n"
                                          f"Товар: {ad_url}\n"
                                          f"Причина: {reason}\n"
-                                         f"Ссылка на чат: {chat_url}", thread_id=0)
+                                         f"Ссылка на чат: {chat_url}", thread_id=telegram_thread_id)
 
                         # Add the tool output
                         tool_outputs.append({

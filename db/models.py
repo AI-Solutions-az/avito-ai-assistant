@@ -6,9 +6,10 @@ class Chat(Base):
     __table_args__ = {'schema': 'assistant'}
 
     chat_id = Column(String, primary_key=True)
-    thread_id = Column(Integer, default=0)
-    client_id = Column(String) # Идентификатор клиента
-    user_id = Column(String) # Идентификатор владельца аккаунта
+    thread_id = Column(Integer, default=0)  # Telegram thread ID
+    thread_id_openai = Column(String)  # OpenAI thread ID (new column)
+    client_id = Column(String)  # Идентификатор клиента
+    user_id = Column(String)  # Идентификатор владельца аккаунта
     chat_url = Column(String)
     under_assistant = Column(Boolean, default=True)
     updated_at = Column(DateTime)
@@ -22,10 +23,11 @@ class Messages(Base):
     id = Column(Integer, primary_key=True)
     chat_id = Column(String)
     author_id = Column(String)
-    from_assistant = Column(Boolean, default=False) # True значит от ассистента, False либо от оператора либо от клиента
+    from_assistant = Column(Boolean, default=False)  # True значит от ассистента, False либо от оператора либо от клиента
     message = Column(String)
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
+
 
 class Orders(Base):
     __tablename__ = 'orders'
@@ -41,6 +43,7 @@ class Orders(Base):
     good_url = Column(String)
     updated_at = Column(DateTime)
     created_at = Column(DateTime)
+
 
 class Returns(Base):
     __tablename__ = 'returns'
