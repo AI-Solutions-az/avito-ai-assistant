@@ -147,7 +147,6 @@ class AssistantManager:
             # Note: With Assistants API we use a new message for the context to ensure it's used
             context_message = f"""
             # STOCK AVAILABILITY AND INFORMATION: {stock_data}
-            # COMMON QUESTIONS ARE PRESENTED IN knowledge_base.docs FILE
             """
 
             # Add the context message to the thread
