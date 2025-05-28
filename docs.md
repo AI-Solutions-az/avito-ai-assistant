@@ -98,3 +98,24 @@ Restart=always <br>
 [Install] <br>
 WantedBy=multi-user.target
 
+# Использование нескольких версий python
+## Настройка
+
+```bash
+# Установи зависимости
+sudo apt update && sudo apt install -y make build-essential libssl-dev zlib1g-dev \
+libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncursesw5-dev xz-utils tk-dev \
+libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+
+# Установи pyenv
+curl https://pyenv.run | bash
+
+# Добавь в .bashrc или .zshrc
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv virtualenv-init -)"
+```
+## Установить версию по умолчанию
+```bash
+pyenv global 3.12.1
+```
