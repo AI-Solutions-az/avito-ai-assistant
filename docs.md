@@ -119,3 +119,13 @@ eval "$(pyenv virtualenv-init -)"
 ```bash
 pyenv global 3.12.1
 ```
+
+
+avito-ai-demo.service
+Склад https://docs.google.com/spreadsheets/d/16flBHTR0XouAsjqN6dtgh23LjlzQZMc92cIQExh-HzA/edit?gid=293278087#gid=293278087
+
+street-store.service
+Склад https://docs.google.com/spreadsheets/d/1Wd2TfQEUC2nfiLrRiBh3-6n4y1zqNB41v9R1wJ0Guf4/edit?gid=0#gid=0
+
+Try Fashion
+Склад https://docs.google.com/spreadsheets/d/1Fj3KYI5qXowmXrWsboKyEFdKx9dCh9mtmRACv9sYq7M/edit?gid=1738833130#gid=1738833130
