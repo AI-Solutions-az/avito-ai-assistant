@@ -72,10 +72,10 @@ async def message_collector(chat_id, message: WebhookRequest):
 
 
 async def process_queue_after_delay(chat_id, author_id, user_id, message_text, ad_url, user_name, thread_id):
-    """ Ждет 30 секунд без новых сообщений, затем обрабатывает очередь """
+    """ Ждет 20 секунд без новых сообщений, затем обрабатывает очередь """
     try:
-        logger.info(f"[Queue] Ожидание 8 секунд для {chat_id}")
-        await asyncio.sleep(8)  # Ожидание без сброса
+        logger.info(f"[Queue] Ожидание 20 секунд для {chat_id}")
+        await asyncio.sleep(20)  # Ожидание без сброса
     except asyncio.CancelledError:
         return  # Таймер был сброшен новым сообщением
 
