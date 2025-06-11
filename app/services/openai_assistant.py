@@ -6,7 +6,7 @@ from db.messages_crud import create_message
 from db.escalation_crud import create_escalation
 from db.returns_crud import create_return
 from db.orders_crud import create_order
-
+from db.chat_crud import update_chat
 
 class AssistantManager:
     def __init__(self):
@@ -183,6 +183,10 @@ class AssistantManager:
 
                         # Create an escalation in the database
                         await create_escalation(chat_id, client_id, client_name, chat_url, reason)
+
+                        # Отключает бота в чате, если была эскалация
+                        await update_chat(chat_id, under_assistant=False)
+
 
                         # Get the Telegram thread_id from the chat object
                         from db.chat_crud import get_chat_by_id
