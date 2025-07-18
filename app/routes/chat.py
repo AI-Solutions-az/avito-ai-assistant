@@ -9,6 +9,8 @@ from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_notifier import create_telegram_forum_topic
 from db.messages_crud import get_latest_message_by_chat_id
 import asyncio
+from datetime import datetime, time
+from app.config import settings
 
 router = APIRouter()
 
@@ -24,8 +26,21 @@ async def message_collector(chat_id, message: WebhookRequest):
     author_id = message.payload.value.author_id
     item_id = message.payload.value.item_id
     if str(message.payload.value.author_id) == "0":
-        logger.info(f"Пропуск системного сообщения...")
+        logger.info(f"[Logic] Пропуск системного сообщения...")
         return None
+
+    # Проверка менеджера с фича-флагом
+    if settings.FEATURE_MANAGER_DETECTION:
+        current_time = datetime.now().time()
+        if (time(22, 0) <= current_time <= time(10, 0)) and (str(author_id) == str(user_id)):
+            logger.info(f"[Logic] Обнаружено совпадение ID (author_id={author_id} == user_id={user_id})")
+
+            # Обновляем статус и проверяем результат
+            await update_chat(chat_id=chat_id, under_assistant=False)
+
+            logger.info(f"[Logic] Ассистент отключен в чате:{chat_id} (Чат отключен)")
+
+            return None  # Прекращаем обработку
 
     # Создание ссылки на чат
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
@@ -72,7 +87,8 @@ async def message_collector(chat_id, message: WebhookRequest):
         processing_tasks[chat_id].cancel()
 
     # Запускаем новый таймер
-    processing_tasks[chat_id] = asyncio.create_task(process_queue_after_delay(chat_id, author_id, user_id, message_text, ad_url, user_name, chat_object.thread_id))
+    processing_tasks[chat_id] = asyncio.create_task(
+        process_queue_after_delay(chat_id, author_id, user_id, message_text, ad_url, user_name, chat_object.thread_id))
 
 
 async def process_queue_after_delay(chat_id, author_id, user_id, message_text, ad_url, user_name, thread_id):
@@ -103,7 +119,8 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
     logger.info(f'[Logic] Обработка запроса от {chat_id}')
 
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
-    response = await process_message(client_id=author_id, user_id=user_id, chat_id=chat_id, message=combined_message, ad_url=ad_url, client_name=user_name, chat_url=chat_url)
+    response = await process_message(client_id=author_id, user_id=user_id, chat_id=chat_id, message=combined_message,
+                                     ad_url=ad_url, client_name=user_name, chat_url=chat_url)
 
     if response:
         logger.info(f"[Logic] Чат {chat_id}\n"
