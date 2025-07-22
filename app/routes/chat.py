@@ -1,3 +1,5 @@
+from datetime import datetime, time
+
 from fastapi import APIRouter, BackgroundTasks
 from fastapi.responses import JSONResponse
 from app.models.schemas import WebhookRequest
@@ -5,6 +7,7 @@ from app.services.avito_api import send_message, get_ad, get_user_info
 from app.services.gpt import process_message
 from app.services.telegram_notifier import send_alert
 from app.services.logs import logger
+from app.config import Settings
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_notifier import create_telegram_forum_topic
 from db.messages_crud import get_latest_message_by_chat_id
@@ -44,22 +47,59 @@ async def message_collector(chat_id, message: WebhookRequest):
         await send_alert(f"Создан новый чат\nКлиент: {user_name}\nСсылка на клиента: {user_url}\n"
                          f"Объявление: {ad_url}\nСсылка на чат: {chat_url}\n", thread_id)
         logger.info(f"[Logic] Создан новый чат {chat_id}")
-
     chat_object = await get_chat_by_id(chat_id)
 
+    current_time = datetime.now().time()
+    is_night_time = time(22, 0) <= current_time or current_time <= time(10, 0)
+
+    if not chat_object:
+        logger.info(f"[Logic] Чат {chat_id} не найден, создаем новый")
+        thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')
+        await create_chat(
+            chat_id=chat_id,
+            thread_id=thread_id,
+            client_id=author_id,
+            user_id=user_id,
+            chat_url=chat_url,
+            under_assistant=is_night_time  # True ночью, False днем
+        )
+        chat_object = await get_chat_by_id(chat_id)  # Получаем свежий объект
     if chat_object.under_assistant is False:
         logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
         return None
-    # Проверка тут, так как нельзя ставить очередь на собственное сообщение
-    if user_id == author_id:
-        last_message = await get_latest_message_by_chat_id(chat_id)
-        if last_message == message_text:
-            logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
+
+    # Инициализировать ночное время. Дневное соответственно - это отрицание ночного(можно будет просто отрицать в функции)
+    if Settings.FEATURE_MANAGER_DETECTION:
+        if not is_night_time:
+            # Если сообщение от менеджера - ставим метку
+            if str(author_id) == str(user_id):
+                await update_chat(
+                    chat_id=chat_id,
+                    under_assistant=False  # Менеджер работает самостоятельно
+                )
+                logger.info(f"Менеджер активен в чате {chat_id}")
+            return None  # Бот не обрабатывает сообщения днем
+
+        #Если Дневное время (not night_time) время работы менеджера ( с 10:00-22:00 ).В это время бот просто получает информацию по чатам,создает новые или обновляет инфу по существующим в БД.Если менеджер ответил в чате ставит метку under_assistant = False для чата в БД.
+        # 1. Ночной режим (22 - 10)
         else:
-            await update_chat(chat_id=chat_id, under_assistant=False)
-            await send_alert("❗️К чату подключился оператор", chat_object.thread_id)
-            logger.info(f'[Logic] К чату {chat_id} подключился оператор')
-        return None
+            if chat_object.under_assistant is False:
+                logger.info(f"Чат {chat_id} пропущен (метка менеджера)")
+                return None
+            # Создание/обновление чата в БД (обязательно для всех сообщений)
+            if user_id == author_id:
+                last_message = await get_latest_message_by_chat_id(chat_id)
+                if last_message == message_text:
+                    logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
+                else:
+                    await update_chat(chat_id=chat_id, under_assistant=False)
+                    await send_alert("❗️К чату подключился оператор", chat_object.thread_id)
+                    logger.info(f'[Logic] К чату {chat_id} подключился оператор')
+                return None
+
+    #Иначе если Ночное время , то работает бот(22:00-10:00) время его работы. Бот включается и начинает реагировать на новые сообщения в чатах. Везде ,где есть метка дневного присутствия менеджера under_assistant = False на них он не реагирует. Иначе если метки нет\
+    #то он идет проверять дальше и происходит проверка начинающаяся с if user_id== author_id
+    # Проверка тут, так как нельзя ставить очередь на собственное сообщение
 
     if chat_id not in message_queues:
         message_queues[chat_id] = asyncio.Queue()
@@ -105,14 +145,16 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
     response = await process_message(client_id=author_id, user_id=user_id, chat_id=chat_id, message=combined_message, ad_url=ad_url, client_name=user_name, chat_url=chat_url)
 
-    if response:
+    if response == "__emoji_only__":
+        logger.info(f"[Logic] Пропущено сообщение только из эмодзи в чате {chat_id}")
+    elif response is None:
+        logger.error(f'[Logic] Не получен ответ от модели в чате {chat_id}')
+    else:
         logger.info(f"[Logic] Чат {chat_id}\n"
                     f"Ответ модели: {response}")
         await send_message(user_id, chat_id, response)
         await send_alert(f"💁‍♂️ {user_name}: {combined_message}\n🤖 Бот: {response}\n_____\n\n",
                          thread_id=thread_id)
-    else:
-        logger.error(f'[Logic] Не получен ответ от модели в чате {chat_id}')
 
 
 @router.post("/chat")
