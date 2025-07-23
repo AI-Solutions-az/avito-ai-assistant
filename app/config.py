@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
 class Settings:
-    FEATURE_MANAGER_DETECTION: bool = False # Фича-флаг управления новой логикой дня/ночи
-    FEATURE_SKIP_EMOJI_ONLY_MESSAGES: bool = True #Фича-флаг управления логикой смайлов
+    working_time_logic: bool = False # Фича-флаг управления новой логикой дня/ночи
+    emoji_identify_logic: bool = True #Фича-флаг управления логикой смайлов
 settings = Settings()
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
