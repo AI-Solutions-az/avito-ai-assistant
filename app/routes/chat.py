@@ -1,5 +1,4 @@
 from datetime import datetime, time
-
 from fastapi import APIRouter, BackgroundTasks
 from fastapi.responses import JSONResponse
 from app.models.schemas import WebhookRequest
@@ -11,6 +10,7 @@ from app.config import Settings
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_notifier import create_telegram_forum_topic
 from db.messages_crud import get_latest_message_by_chat_id
+
 import asyncio
 
 router = APIRouter()
@@ -56,7 +56,7 @@ async def message_collector(chat_id, message: WebhookRequest):
         logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
         return None
 
-    if Settings.working_time_logic:
+    if Settings.Working_time_logic:
         # Дневной режим (10:00 - 22:00)
         if not is_night_time:
             # Если сообщение от менеджера - ставим метку
@@ -81,6 +81,7 @@ async def message_collector(chat_id, message: WebhookRequest):
                     await send_alert("❗️К чату подключился оператор", chat_object.thread_id)
                     logger.info(f'[Logic] К чату {chat_id} подключился оператор')
                 return None
+
     if user_id == author_id:
         last_message = await get_latest_message_by_chat_id(chat_id)
         if last_message == message_text:
@@ -90,8 +91,8 @@ async def message_collector(chat_id, message: WebhookRequest):
             await send_alert("❗️К чату подключился оператор", chat_object.thread_id)
             logger.info(f'[Logic] К чату {chat_id} подключился оператор')
         return None
-    # Проверка тут, так как нельзя ставить очередь на собственное сообщение
 
+    # Проверка тут, так как нельзя ставить очередь на собственное сообщение
     if chat_id not in message_queues:
         message_queues[chat_id] = asyncio.Queue()
 
