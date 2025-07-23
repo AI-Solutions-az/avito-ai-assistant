@@ -1,9 +1,12 @@
 import os
+
 from dotenv import load_dotenv
+
 class Settings:
-    working_time_logic: bool = False # Фича-флаг управления новой логикой дня/ночи
-    emoji_identify_logic: bool = True #Фича-флаг управления логикой смайлов
+    Working_time_logic: bool = True # Фича-флаг управления новой логикой дня/ночи
+
 settings = Settings()
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
