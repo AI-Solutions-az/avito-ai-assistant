@@ -1,4 +1,6 @@
 import json
+import re
+
 from app.config import OPENAI_API_KEY, OPENAI_ASSISTANT_ID, prompt
 from app.services.logs import logger
 from openai import OpenAI
@@ -114,6 +116,7 @@ class AssistantManager:
             logger.info(f"[Assistant] Created new OpenAI thread: {thread.id}")
             return thread.id
 
+
     async def process_message(self, client_id, user_id, chat_id, message, ad_url, client_name, chat_url):
         """
         Process a message using the Assistants API.
@@ -121,11 +124,37 @@ class AssistantManager:
         """
         logger.info(f"[Assistant] Processing message in chat {chat_id}")
 
-        # Add message to database for record-keeping
-        await create_message(chat_id, client_id, from_assistant=False, message=message)
+        # Добавлена обработка смайлов
+        try:
+            emoji_pattern = re.compile(
+                "["  # Диапазоны юникода для эмодзи
+                "\U0001F600-\U0001F64F"  # Смайлики
+                "\U0001F300-\U0001F5FF"  # Символы
+                "\U0001F680-\U0001F6FF"  # Транспорт
+                "\U0001F700-\U0001F77F"
+                "\U0001F780-\U0001F7FF"
+                "\U0001F800-\U0001F8FF"
+                "\U0001F900-\U0001F9FF"
+                "\U0001FA00-\U0001FA6F"
+                "\U0001FA70-\U0001FAFF"
+                "\U00002702-\U000027B0"
+                "\U000024C2-\U0001F251"
+                "]+", flags=re.UNICODE
+            )
+            clean_text = emoji_pattern.sub('', message).strip()
+        except Exception as e:
+            logger.error(f"[Assistant] Emoji filtering failed: {e}")
+            clean_text = message  # fallback
+
+        # ✅ Если после удаления эмодзи ничего не осталось — игнорируем
+        if not clean_text:
+            logger.info(f"[Assistant] Ignored emoji-only message in chat {chat_id}: {message}")
+            return "__emoji_only__"
+
+        # Сохраняем очищенное сообщение в БД
+        await create_message(chat_id, client_id, from_assistant=False, message=clean_text)
 
         try:
-            # Get or create a thread for this chat
             thread_id = await self.get_or_create_thread(chat_id)
 
             # Get stock information
@@ -160,7 +189,7 @@ class AssistantManager:
             self.client.beta.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
-                content=message
+                content=clean_text
             )
 
             # Run the assistant
@@ -288,7 +317,6 @@ class AssistantManager:
         except Exception as e:
             logger.error(f"[Assistant] Error processing message: {e}")
             return None
-
 
 # Create a singleton instance
 assistant_manager = AssistantManager()

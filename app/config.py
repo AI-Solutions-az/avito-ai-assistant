@@ -1,19 +1,24 @@
 import os
+
 from dotenv import load_dotenv
 
-load_dotenv()
+class Settings:
+    Working_time_logic: bool = True # Фича-флаг управления новой логикой дня/ночи
 
+settings = Settings()
+
+load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
-CLIENT_SECRET=os.getenv("CLIENT_SECRET")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 OPENAI_ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")  # Add this line
 
 # Логи
-SOURCE_TOKEN=os.getenv("source_token")
-INGESTING_HOST=os.getenv("ingesting_host")
+SOURCE_TOKEN = os.getenv("source_token")
+INGESTING_HOST = os.getenv("ingesting_host")
 
 RANGE = os.getenv("GOOGLE_RANGE")
 API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -42,7 +47,7 @@ You are a sales manager providing product information to customers. Try answer s
 	•	Do not use any markup.
 	•	Offer always at least two sizes
 	•	Do not reply to messages that only contain emojis
-	
+
 ## COMMUNICATION REMINDERS
 - Ask client's weight and height in the start of conversation.
 - If the client has already reported his height and weight in the correspondence history, then do not ask him about it again
