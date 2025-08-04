@@ -4,17 +4,22 @@
 """
 
 import asyncio
-import sys
-import os
 import json
 
 import pytest
+import sys
+import os
 
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Добавляем корневую папку проекта в путь
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)  # Поднимаемся на уровень выше
+sys.path.insert(0, project_root)
+
+print(f"Project root: {project_root}")  # Для отладки
 
 from app.services.google_sheets_api import get_all_sheet_names, fetch_google_sheet_stock
 
-
+@pytest.mark.asyncio
 async def explore_new_structure():
     """Исследуем новую структуру таблицы"""
     print("🔍 ИССЛЕДОВАНИЕ НОВОЙ СТРУКТУРЫ ТАБЛИЦЫ")
@@ -41,7 +46,7 @@ async def explore_new_structure():
 
     return product_sheets
 
-
+@pytest.mark.asyncio
 async def test_category_search():
     """Тестируем поиск по категориям с вашими реальными ID"""
     print(f"\n🧪 ТЕСТ ПОИСКА ПО КАТЕГОРИЯМ")
@@ -114,7 +119,7 @@ async def test_category_search():
 
     return results
 
-
+@pytest.mark.asyncio
 async def print_summary(results):
     """Выводим сводку результатов"""
     print(f"\n📊 СВОДКА РЕЗУЛЬТАТОВ")
@@ -157,7 +162,7 @@ async def print_summary(results):
         print(f"      • Правильность размещения ID товаров")
         print(f"      • Формат данных в листах")
 
-
+@pytest.mark.asyncio
 async def main():
     """Главная функция"""
     print("🚀 ТЕСТ НОВОЙ СТРУКТУРЫ ТАБЛИЦЫ")
