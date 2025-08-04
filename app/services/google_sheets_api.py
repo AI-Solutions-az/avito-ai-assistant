@@ -2,7 +2,7 @@ import httpx
 import json
 import re
 from app.services.logs import logger
-from app.config import RANGE, SPREADSHEET_ID, WAREHOUSE_SHEET_NAME, KNOWLEDGE_BASE_SHEET_NAME, API_KEY
+from app.config import RANGE, SPREADSHEET_ID, API_KEY
 
 
 def extract_ad_id_from_url(ad_url):
@@ -42,23 +42,37 @@ def parse_ids_from_cell(cell_value):
     return valid_ids
 
 
-async def fetch_google_sheet_stock(ad_url):
-    '''
-    Поиск строки с идентификатором объявления
-    Парсинг строки
-    Возврат json'а с данными по товару и его доступности
-    :param ad_url:
-    :return:
-    '''
-    # Извлекаем ID из URL
-    ad_id = extract_ad_id_from_url(ad_url)
-    if not ad_id:
-        logger.error(f"Не удалось извлечь ID из URL: {ad_url}")
-        return None
+async def get_all_sheet_names():
+    """
+    Получает список всех листов в Google таблице
+    """
+    url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
 
-    logger.info(f"Ищем объявление с ID: {ad_id}")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url)
+            response.raise_for_status()
+            data = response.json()
 
-    url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{WAREHOUSE_SHEET_NAME}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
+            sheets = []
+            for sheet in data.get('sheets', []):
+                sheet_name = sheet['properties']['title']
+                sheets.append(sheet_name)
+                logger.info(f"Найден лист: {sheet_name}")
+
+            return sheets
+        except Exception as e:
+            logger.error(f"Ошибка при получении списка листов: {e}")
+            return []
+
+
+async def search_product_in_sheet(ad_id, sheet_name):
+    """
+    Ищет товар в конкретном листе
+    """
+    logger.info(f"Поиск товара с ID {ad_id} в листе: {sheet_name}")
+
+    url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{sheet_name}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
 
     async with httpx.AsyncClient() as client:
         try:
@@ -67,7 +81,7 @@ async def fetch_google_sheet_stock(ad_url):
             data = response.json()
 
             if "values" not in data or not data["values"]:
-                logger.error("Ошибка: данные не найдены")
+                logger.info(f"Данные не найдены в листе {sheet_name}")
                 return None
 
             rows = data["values"]
@@ -80,11 +94,10 @@ async def fetch_google_sheet_stock(ad_url):
                     break
 
             if headers_row_index is None:
-                logger.error("Ошибка: заголовки не найдены")
+                logger.info(f"Заголовки не найдены в листе {sheet_name}")
                 return None
 
             headers = rows[headers_row_index]
-            logger.info(f"Найденные заголовки: {headers}")
 
             # Ищем строку с нужным ID
             id_column_index = 0  # Колонка A
@@ -97,88 +110,121 @@ async def fetch_google_sheet_stock(ad_url):
                     ids_in_cell = parse_ids_from_cell(row[id_column_index])
                     # Проверяем, есть ли наш ID среди них
                     if ad_id in ids_in_cell:
-                        logger.info(f"Объявление с ID {ad_id} найдено в строке {i + 1}")
+                        logger.info(f"Товар с ID {ad_id} найден в листе {sheet_name}, строка {i + 1}")
                         found_row_index = i
                         break
 
             if found_row_index is None:
-                logger.error(f"Ошибка: объявление с ID {ad_id} не найдено")
+                logger.info(f"Товар с ID {ad_id} не найден в листе {sheet_name}")
                 return None
 
-            # Для каждого товара нужно определить его размерную сетку
-            # Находим строку заголовков для текущего товара
-            product_headers_index = None
-            for i in range(found_row_index - 1, max(0, found_row_index - 5), -1):
-                if rows[i] and rows[i][0] == "Id":
-                    product_headers_index = i
-                    break
+            # Возвращаем найденные данные
+            return {
+                'sheet_name': sheet_name,
+                'headers': headers,
+                'found_row_index': found_row_index,
+                'rows': rows
+            }
 
-            if product_headers_index is None:
-                # Если не нашли заголовки выше, используем основные
-                product_headers_index = headers_row_index
-
-            product_headers = rows[product_headers_index]
-            logger.info(f"Заголовки для товара: {product_headers}")
-
-            # Извлекаем все строки для данного товара
-            product_rows = []
-            current_index = found_row_index
-
-            # Получаем все ID из найденной строки
-            found_ids = parse_ids_from_cell(rows[found_row_index][id_column_index])
-            logger.info(f"ID в найденной строке: {found_ids}")
-
-            while current_index < len(rows):
-                row = rows[current_index]
-                logger.info(f"Обрабатываем строку {current_index + 1}: {row[:5] if len(row) > 5 else row}")
-
-                # Если строка пустая или начинается новый блок заголовков
-                if not row or (row and row[0] == "Id"):
-                    logger.info("Встретили пустую строку или новый блок заголовков")
-                    break
-
-                # Если встретили новый набор ID в колонке A (новый товар)
-                if current_index > found_row_index and len(row) > id_column_index and row[id_column_index]:
-                    current_ids = parse_ids_from_cell(row[id_column_index])
-                    # Проверяем, что это не те же ID
-                    if not any(id in found_ids for id in current_ids):
-                        logger.info(f"Встретили новый товар с ID: {current_ids}")
-                        break
-
-                # Добавляем строку только если есть данные о цвете
-                # Цвет находится в колонке D (индекс 3) из-за пустой колонки
-                if len(row) > 3 and row[3]:  # Проверяем наличие цвета в колонке D
-                    product_rows.append(row)
-                    logger.info(f"Добавлена строка с цветом: {row[3]}")
-                else:
-                    logger.info(f"Пропущена строка без цвета")
-
-                current_index += 1
-
-            if not product_rows:
-                logger.error("Ошибка: данные о товаре не найдены")
-                return None
-
-            return parse_stock(product_headers, product_rows, ad_url)
-
-        except httpx.RequestError as e:
-            logger.error(f"Ошибка при запросе: {e}")
-            return None
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP ошибка: {e.response.status_code} - {e.response.text}")
-            return None
         except Exception as e:
-            logger.error(f"Неожиданная ошибка: {e}")
+            logger.error(f"Ошибка при поиске в листе {sheet_name}: {e}")
             return None
 
 
-def parse_stock(headers, product_rows, ad_url):
+async def fetch_google_sheet_stock(ad_url):
     '''
-    Парсинг информации о найденной по идентификатору строке
-    :param headers: Заголовки колонок
-    :param product_rows: Строки с данными о товаре
-    :param ad_url: URL объявления
-    :return:
+    Поиск товара по всем листам Google таблицы
+    Возвращает данные о товаре и его доступности
+    '''
+    # Извлекаем ID из URL
+    ad_id = extract_ad_id_from_url(ad_url)
+    if not ad_id:
+        logger.error(f"Не удалось извлечь ID из URL: {ad_url}")
+        return None
+
+    logger.info(f"Ищем объявление с ID: {ad_id}")
+
+    # Получаем список всех листов
+    sheet_names = await get_all_sheet_names()
+    if not sheet_names:
+        logger.error("Не удалось получить список листов")
+        return None
+
+    # Ищем товар во всех листах
+    for sheet_name in sheet_names:
+        # Пропускаем служебные листы
+        if sheet_name.lower() in ['knowledge_base', 'база знаний', 'settings', 'настройки']:
+            logger.info(f"Пропускаем служебный лист: {sheet_name}")
+            continue
+
+        result = await search_product_in_sheet(ad_id, sheet_name)
+        if result:
+            logger.info(f"Товар найден в категории: {sheet_name}")
+            return await parse_product_from_sheet_data(result, ad_url)
+
+    logger.error(f"Товар с ID {ad_id} не найден ни в одном листе")
+    return None
+
+
+async def parse_product_from_sheet_data(sheet_data, ad_url):
+    """
+    Парсит данные товара из найденного листа
+    """
+    try:
+        sheet_name = sheet_data['sheet_name']
+        headers = sheet_data['headers']
+        rows = sheet_data['rows']
+        found_row_index = sheet_data['found_row_index']
+
+        # Извлекаем все строки для данного товара
+        product_rows = []
+        current_index = found_row_index
+
+        # Получаем все ID из найденной строки
+        found_ids = parse_ids_from_cell(rows[found_row_index][0])
+        logger.info(f"ID в найденной строке: {found_ids}")
+
+        while current_index < len(rows):
+            row = rows[current_index]
+            logger.info(f"Обрабатываем строку {current_index + 1}: {row[:5] if len(row) > 5 else row}")
+
+            # Если строка пустая или начинается новый блок заголовков
+            if not row or (row and row[0] == "Id"):
+                logger.info("Встретили пустую строку или новый блок заголовков")
+                break
+
+            # Если встретили новый набор ID в колонке A (новый товар)
+            if current_index > found_row_index and len(row) > 0 and row[0]:
+                current_ids = parse_ids_from_cell(row[0])
+                # Проверяем, что это не те же ID
+                if not any(id in found_ids for id in current_ids):
+                    logger.info(f"Встретили новый товар с ID: {current_ids}")
+                    break
+
+            # Добавляем строку только если есть данные о цвете
+            # Цвет находится в колонке D (индекс 3) из-за пустой колонки
+            if len(row) > 3 and row[3]:  # Проверяем наличие цвета в колонке D
+                product_rows.append(row)
+                logger.info(f"Добавлена строка с цветом: {row[3]}")
+            else:
+                logger.info(f"Пропущена строка без цвета")
+
+            current_index += 1
+
+        if not product_rows:
+            logger.error("Ошибка: данные о товаре не найдены")
+            return None
+
+        return parse_stock_with_availability_only(headers, product_rows, ad_url, sheet_name)
+
+    except Exception as e:
+        logger.error(f"Ошибка при парсинге данных из листа: {e}")
+        return None
+
+
+def parse_stock_with_availability_only(headers, product_rows, ad_url, category):
+    '''
+    Парсинг информации о товаре с ответами только "Есть в наличии"/"Нет в наличии"
     '''
     try:
         if not product_rows:
@@ -211,12 +257,13 @@ def parse_stock(headers, product_rows, ad_url):
 
         product = {
             'id': ad_url,
+            'category': category,  # Добавляем категорию товара
             'name': safe_get(first_row, 1),  # Товар в колонке B
-            'price': '',  # Цена не указана в новой структуре
+            'price': '',
             'description': safe_get(first_row, description_index) if description_index else '',
             'size_info': safe_get(first_row, size_info_index) if size_info_index else '',
-            'payment_method': '',  # Не указано в новой структуре
-            'delivery_method': '',  # Не указано в новой структуре
+            'payment_method': '',
+            'delivery_method': '',
             'photo_ids': safe_get(first_row, photo_ids_index) if photo_ids_index else '',
             'stock': []
         }
@@ -234,11 +281,10 @@ def parse_stock(headers, product_rows, ad_url):
             }
 
             # Размеры: динамически определяем из заголовков
-            # Находим начало и конец колонок с размерами
             size_mapping = {}
-            size_start_index = 4  # Начинаем с колонки E (после Id, Товар, пустая, Цвет)
+            size_start_index = 4  # Начинаем с колонки E
 
-            # Ищем где заканчиваются размеры (до колонок с описанием)
+            # Ищем где заканчиваются размеры
             for i in range(size_start_index, len(headers)):
                 header = headers[i].strip() if i < len(headers) and headers[i] else ''
 
@@ -261,7 +307,7 @@ def parse_stock(headers, product_rows, ad_url):
                         size_name = 'XS'
                     elif size_name == 'S':
                         size_name = 'S'
-                    elif size_name == 'M' or size_name == 'М':  # Иногда может быть кириллица
+                    elif size_name == 'M' or size_name == 'М':
                         size_name = 'M'
                     elif size_name == 'L':
                         size_name = 'L'
@@ -276,13 +322,13 @@ def parse_stock(headers, product_rows, ad_url):
 
             if not size_mapping:
                 logger.warning("Не найдены колонки с размерами, используем стандартный диапазон")
-                # Если размеры не найдены, пробуем стандартный диапазон
                 for i in range(4, min(12, len(headers))):
                     if i < len(headers) and headers[i] and headers[i].strip():
                         size_mapping[i] = headers[i].strip()
 
             logger.info(f"Итоговая карта размеров: {size_mapping}")
 
+            # ИЗМЕНЕНИЕ: Вместо точного количества возвращаем только статус наличия
             for col_index, size_name in size_mapping.items():
                 quantity = safe_get(row, col_index, '0')
                 # Преобразуем в число, если это возможно
@@ -290,18 +336,20 @@ def parse_stock(headers, product_rows, ad_url):
                     quantity = int(quantity) if quantity else 0
                 except ValueError:
                     quantity = 0
-                stock_item['sizes'][size_name] = quantity
 
-            # Подсчитываем общее количество для данного цвета
-            stock_item['total_quantity'] = sum(stock_item['sizes'].values())
+                # Возвращаем только статус наличия
+                stock_item['sizes'][size_name] = "Есть в наличии" if quantity > 0 else "Нет в наличии"
 
-            # Добавляем только если есть хотя бы один товар в наличии
-            if stock_item['total_quantity'] > 0 or all(qty == 0 for qty in stock_item['sizes'].values()):
-                product['stock'].append(stock_item)
+            # Подсчитываем общее количество для данного цвета (для внутренней логики)
+            available_sizes = sum(1 for status in stock_item['sizes'].values() if status == "Есть в наличии")
+            stock_item['has_available_sizes'] = available_sizes > 0
+
+            # Добавляем все цвета (даже если нет в наличии)
+            product['stock'].append(stock_item)
 
         # Добавляем сводную информацию
-        product['total_stock'] = sum(item['total_quantity'] for item in product['stock'])
-        product['available_colors'] = [item['color'] for item in product['stock'] if item['total_quantity'] > 0]
+        product['has_stock'] = any(item['has_available_sizes'] for item in product['stock'])
+        product['available_colors'] = [item['color'] for item in product['stock'] if item['has_available_sizes']]
 
         return json.dumps(product, ensure_ascii=False, indent=4)
 
@@ -312,38 +360,50 @@ def parse_stock(headers, product_rows, ad_url):
 
 async def get_knowledge_base():
     '''
-    Получение информации из базы знаний
-    :return:
+    Получение информации из базы знаний (остается без изменений)
     '''
-    url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{KNOWLEDGE_BASE_SHEET_NAME}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url)
-            response.raise_for_status()  # Проверка успешности запроса
-            data = response.json()
+    # Пытаемся найти лист с базой знаний
+    knowledge_sheet_names = ['Knowledge_Base', 'База знаний', 'knowledge_base', 'KNOWLEDGE_BASE']
 
-            if "values" not in data or not data["values"]:
-                logger.error("[DB] Ошибка: данные не найдены")
-                return
+    for sheet_name in knowledge_sheet_names:
+        url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{sheet_name}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
 
-            result = []
-            for row in data["values"]:
-                # Проверяем, что в строке есть хотя бы 2 элемента
-                if len(row) >= 2:
-                    question_answer = {
-                        'question': row[0],  # Первый элемент строки - это вопрос
-                        'answer_example': row[1]  # Второй элемент строки - это ответ
-                    }
-                    result.append(question_answer)
-                elif len(row) == 1:
-                    # Если есть только вопрос без ответа
-                    question_answer = {
-                        'question': row[0],
-                        'answer_example': ''
-                    }
-                    result.append(question_answer)
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url)
+                response.raise_for_status()
+                data = response.json()
 
-            return json.dumps(result, ensure_ascii=False, indent=2)
-        except httpx.RequestError as e:
-            logger.error(f"[DB] Ошибка при запросе: {e}")
-            return None
+                if "values" not in data or not data["values"]:
+                    logger.info(f"Данные не найдены в листе {sheet_name}")
+                    continue
+
+                result = []
+                for row in data["values"]:
+                    # Проверяем, что в строке есть хотя бы 2 элемента
+                    if len(row) >= 2:
+                        question_answer = {
+                            'question': row[0],  # Первый элемент строки - это вопрос
+                            'answer_example': row[1]  # Второй элемент строки - это ответ
+                        }
+                        result.append(question_answer)
+                    elif len(row) == 1:
+                        # Если есть только вопрос без ответа
+                        question_answer = {
+                            'question': row[0],
+                            'answer_example': ''
+                        }
+                        result.append(question_answer)
+
+                logger.info(f"База знаний найдена в листе: {sheet_name}")
+                return json.dumps(result, ensure_ascii=False, indent=2)
+
+            except httpx.RequestError as e:
+                logger.info(f"Лист {sheet_name} не найден или недоступен: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Ошибка при обработке листа {sheet_name}: {e}")
+                continue
+
+    logger.warning("База знаний не найдена ни в одном из ожидаемых листов")
+    return None
