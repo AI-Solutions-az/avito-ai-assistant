@@ -5,44 +5,33 @@ from app.services.logs import logger
 from app.config import RANGE, SPREADSHEET_ID, API_KEY
 
 
-def extract_ad_id_from_url(ad_url):
+async def extract_ad_id_from_url(ad_url):  # ✅ ASYNC
     """
     Извлекает ID объявления из URL.
-    Примеры:
-    - https://www.avito.ru/moskva/odezhda_obuv_aksessuary/hudi_stussy_2xl_7352154008 -> 7352154008
-    - https://www.avito.ru/moskva/odezhda_obuv_aksessuary/svitshot_lyle_scott_7352966820 -> 7352966820
     """
     match = re.search(r'_(\d+)$', ad_url)
     if match:
         return match.group(1)
-    # Если не найдено в конце, попробуем найти последовательность цифр
     match = re.search(r'/(\d{7,})(?:/|$)', ad_url)
     if match:
         return match.group(1)
     return None
 
 
-def parse_ids_from_cell(cell_value):
+async def parse_ids_from_cell(cell_value):  # ✅ ASYNC
     """
     Извлекает все ID из ячейки, где ID могут быть разделены запятыми или пробелами.
-    Возвращает список ID.
     """
     if not cell_value:
         return []
 
-    # Преобразуем в строку на случай если это число
     cell_value = str(cell_value).strip()
-
-    # Заменяем запятые на пробелы и разбиваем по пробелам
     ids = re.split(r'[,\s]+', cell_value)
-
-    # Фильтруем только валидные ID (цифры)
     valid_ids = [id_str.strip() for id_str in ids if id_str.strip().isdigit()]
-
     return valid_ids
 
 
-async def get_all_sheet_names():
+async def get_all_sheet_names():  # ✅ ASYNC
     """
     Получает список всех листов в Google таблице
     """
@@ -66,7 +55,7 @@ async def get_all_sheet_names():
             return []
 
 
-async def search_product_in_sheet(ad_id, sheet_name):
+async def search_product_in_sheet(ad_id, sheet_name):  # ✅ ASYNC
     """
     Ищет товар в конкретном листе
     """
@@ -107,7 +96,7 @@ async def search_product_in_sheet(ad_id, sheet_name):
                 row = rows[i]
                 if len(row) > id_column_index and row[id_column_index]:
                     # Извлекаем все ID из ячейки
-                    ids_in_cell = parse_ids_from_cell(row[id_column_index])
+                    ids_in_cell = await parse_ids_from_cell(row[id_column_index])  # ✅ await
                     # Проверяем, есть ли наш ID среди них
                     if ad_id in ids_in_cell:
                         logger.info(f"Товар с ID {ad_id} найден в листе {sheet_name}, строка {i + 1}")
@@ -131,13 +120,13 @@ async def search_product_in_sheet(ad_id, sheet_name):
             return None
 
 
-async def fetch_google_sheet_stock(ad_url):
-    '''
+async def fetch_google_sheet_stock(ad_url):  # ✅ ASYNC
+    """
     Поиск товара по всем листам Google таблицы
     Возвращает данные о товаре и его доступности
-    '''
+    """
     # Извлекаем ID из URL
-    ad_id = extract_ad_id_from_url(ad_url)
+    ad_id = await extract_ad_id_from_url(ad_url)  # ✅ await
     if not ad_id:
         logger.error(f"Не удалось извлечь ID из URL: {ad_url}")
         return None
@@ -145,28 +134,28 @@ async def fetch_google_sheet_stock(ad_url):
     logger.info(f"Ищем объявление с ID: {ad_id}")
 
     # Получаем список всех листов
-    sheet_names = await get_all_sheet_names()
+    sheet_names = await get_all_sheet_names()  # ✅ await
     if not sheet_names:
         logger.error("Не удалось получить список листов")
         return None
 
     # Ищем товар во всех листах
     for sheet_name in sheet_names:
-        # Пропускаем служебные листы
-        if sheet_name.lower() in ['knowledge_base', 'база знаний', 'settings', 'настройки']:
+        # Пропускаем служебные листы (только knowledge_base)
+        if sheet_name.lower() == 'knowledge_base':  # ✅ УПРОЩЕНО
             logger.info(f"Пропускаем служебный лист: {sheet_name}")
             continue
 
-        result = await search_product_in_sheet(ad_id, sheet_name)
+        result = await search_product_in_sheet(ad_id, sheet_name)  # ✅ await
         if result:
             logger.info(f"Товар найден в категории: {sheet_name}")
-            return await parse_product_from_sheet_data(result, ad_url)
+            return await parse_product_from_sheet_data(result, ad_url)  # ✅ await
 
     logger.error(f"Товар с ID {ad_id} не найден ни в одном листе")
     return None
 
 
-async def parse_product_from_sheet_data(sheet_data, ad_url):
+async def parse_product_from_sheet_data(sheet_data, ad_url):  # ✅ ASYNC
     """
     Парсит данные товара из найденного листа
     """
@@ -181,7 +170,7 @@ async def parse_product_from_sheet_data(sheet_data, ad_url):
         current_index = found_row_index
 
         # Получаем все ID из найденной строки
-        found_ids = parse_ids_from_cell(rows[found_row_index][0])
+        found_ids = await parse_ids_from_cell(rows[found_row_index][0])  # ✅ await
         logger.info(f"ID в найденной строке: {found_ids}")
 
         while current_index < len(rows):
@@ -195,7 +184,7 @@ async def parse_product_from_sheet_data(sheet_data, ad_url):
 
             # Если встретили новый набор ID в колонке A (новый товар)
             if current_index > found_row_index and len(row) > 0 and row[0]:
-                current_ids = parse_ids_from_cell(row[0])
+                current_ids = await parse_ids_from_cell(row[0])  # ✅ await
                 # Проверяем, что это не те же ID
                 if not any(id in found_ids for id in current_ids):
                     logger.info(f"Встретили новый товар с ID: {current_ids}")
@@ -215,24 +204,24 @@ async def parse_product_from_sheet_data(sheet_data, ad_url):
             logger.error("Ошибка: данные о товаре не найдены")
             return None
 
-        return parse_stock_with_availability_only(headers, product_rows, ad_url, sheet_name)
+        return await parse_stock_with_availability_only(headers, product_rows, ad_url, sheet_name)  # ✅ await
 
     except Exception as e:
         logger.error(f"Ошибка при парсинге данных из листа: {e}")
         return None
 
 
-def parse_stock_with_availability_only(headers, product_rows, ad_url, category):
-    '''
+async def parse_stock_with_availability_only(headers, product_rows, ad_url, category):  # ✅ ASYNC
+    """
     Парсинг информации о товаре с ответами только "Есть в наличии"/"Нет в наличии"
-    '''
+    """
     try:
         if not product_rows:
             logger.error("Нет данных для парсинга")
             return None
 
         # Функция для безопасного получения значения из списка
-        def safe_get(lst, index, default=''):
+        async def safe_get(lst, index, default=''):  # ✅ ASYNC
             try:
                 value = lst[index] if index < len(lst) else default
                 return value.strip() if isinstance(value, str) else value
@@ -257,20 +246,20 @@ def parse_stock_with_availability_only(headers, product_rows, ad_url, category):
 
         product = {
             'id': ad_url,
-            'category': category,  # Добавляем категорию товара
-            'name': safe_get(first_row, 1),  # Товар в колонке B
+            'category': category,  # Добавляем категорию товара (название листа)
+            'name': await safe_get(first_row, 1),  # ✅ await
             'price': '',
-            'description': safe_get(first_row, description_index) if description_index else '',
-            'size_info': safe_get(first_row, size_info_index) if size_info_index else '',
+            'description': await safe_get(first_row, description_index) if description_index else '',  # ✅ await
+            'size_info': await safe_get(first_row, size_info_index) if size_info_index else '',  # ✅ await
             'payment_method': '',
             'delivery_method': '',
-            'photo_ids': safe_get(first_row, photo_ids_index) if photo_ids_index else '',
+            'photo_ids': await safe_get(first_row, photo_ids_index) if photo_ids_index else '',  # ✅ await
             'stock': []
         }
 
         # Обрабатываем каждую строку с цветом
         for row in product_rows:
-            color = safe_get(row, 3)  # Цвет в колонке D (индекс 3)
+            color = await safe_get(row, 3)  # ✅ await - Цвет в колонке D (индекс 3)
             if not color:
                 continue
 
@@ -303,16 +292,9 @@ def parse_stock_with_availability_only(headers, product_rows, ad_url, category):
                         size_name = 'XXL (2XL)'
                     elif size_name == 'XXXL':
                         size_name = 'XXXL (3XL)'
-                    elif size_name == 'XS':
-                        size_name = 'XS'
-                    elif size_name == 'S':
-                        size_name = 'S'
                     elif size_name == 'M' or size_name == 'М':
                         size_name = 'M'
-                    elif size_name == 'L':
-                        size_name = 'L'
-                    elif size_name == 'XL':
-                        size_name = 'XL'
+                    # Остальные размеры остаются как есть: XS, S, L, XL
 
                     size_mapping[i] = size_name
                     logger.info(f"Найден размер '{header}' -> '{size_name}' в колонке {i}")
@@ -328,15 +310,17 @@ def parse_stock_with_availability_only(headers, product_rows, ad_url, category):
 
             logger.info(f"Итоговая карта размеров: {size_mapping}")
 
-            # ИЗМЕНЕНИЕ: Вместо точного количества возвращаем только статус наличия
+            # КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Вместо точного количества возвращаем только статус наличия
             for col_index, size_name in size_mapping.items():
-                quantity = safe_get(row, col_index, '0')
+                quantity = await safe_get(row, col_index, '0')  # ✅ await
+
                 # Преобразуем в число, если это возможно
                 try:
                     quantity = int(quantity) if quantity else 0
                 except ValueError:
                     quantity = 0
 
+                # ❗ ГЛАВНОЕ ОТЛИЧИЕ ОТ СТАРОЙ ВЕРСИИ:
                 # Возвращаем только статус наличия
                 stock_item['sizes'][size_name] = "Есть в наличии" if quantity > 0 else "Нет в наличии"
 
@@ -358,12 +342,12 @@ def parse_stock_with_availability_only(headers, product_rows, ad_url, category):
         return None
 
 
-async def get_knowledge_base():
-    '''
+async def get_knowledge_base():  # ✅ ASYNC
+    """
     Получение информации из базы знаний (остается без изменений)
-    '''
+    """
     # Пытаемся найти лист с базой знаний
-    knowledge_sheet_names = ['Knowledge_Base', 'База знаний', 'knowledge_base', 'KNOWLEDGE_BASE']
+    knowledge_sheet_names = ['knowledge_base']
 
     for sheet_name in knowledge_sheet_names:
         url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{sheet_name}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
