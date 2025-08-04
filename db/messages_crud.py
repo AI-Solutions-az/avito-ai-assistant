@@ -7,6 +7,7 @@ import datetime
 
 # Create
 async def create_message(chat_id, author_id, from_assistant=False, message=None):
+    print(f"=== create_message called! chat_id={chat_id} author_id={author_id} message={message}")
     logger.info(f"[DB] Создание сообщения в чате {chat_id}, от {author_id}")
     async with SessionLocal() as session:
         try:
@@ -65,3 +66,20 @@ async def update_message(message_id, chat_id=None, author_id=None, from_assistan
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при обновлении сообщения: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
             await session.rollback()
+# Messages
+async def get_messages_by_chat_id(chat_id):
+    """Получение всех сообщений по chat_id"""
+    from sqlalchemy.future import select
+    from db.models import Messages
+
+    async with SessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(Messages)
+                .filter(Messages.chat_id == chat_id)
+                .order_by(Messages.created_at.asc())
+            )
+            messages = result.scalars().all()
+            return messages
+        except Exception as e:
+            return []
