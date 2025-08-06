@@ -5,7 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 class Settings:
-    WORKING_TIME_LOGIC: bool = True # Фича-флаг управления новой логикой дня/ночи
+    WORKING_TIME_LOGIC: bool = False # Фича-флаг управления новой логикой дня/ночи
     VOICE_RECOGNITION_ENABLED: bool = True # Обработка голосовых сообщений
     WHISPER_MODEL: str = "whisper-1"
     MAX_AUDIO_SIZE_MB: int = 25
@@ -72,4 +72,5 @@ You are a sales manager providing product information to customers. Try answer s
     - Keep responses clear and to the point.
     - Ensure a smooth and helpful shopping experience
     - When mentioning product categories, use the category name from the stock information if available
+
 '''
