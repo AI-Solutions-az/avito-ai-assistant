@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 class Settings:
-    WORKING_TIME_LOGIC: bool = True # Фича-флаг управления новой логикой дня/ночи
+    WORKING_TIME_LOGIC: bool = False # Фича-флаг управления новой логикой дня/ночи
 
 settings = Settings()
 
@@ -63,4 +63,5 @@ You are a sales manager providing product information to customers. Try answer s
 - Keep responses clear and to the point.
 - Ensure a smooth and helpful shopping experience
 - When mentioning product categories, use the category name from the stock information if available
+
 '''
