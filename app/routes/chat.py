@@ -56,7 +56,7 @@ async def message_collector(chat_id, message: WebhookRequest):
         logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
         return None
 
-    if Settings.Working_time_logic:
+    if Settings.WORKING_TIME_LOGIC:
         # Дневной режим (10:00 - 22:00)
         if not is_night_time:
             # Если сообщение от менеджера - ставим метку
@@ -155,3 +155,4 @@ async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     chat_id = message.payload.value.chat_id
     background_tasks.add_task(message_collector, chat_id, message)
     return JSONResponse(content={"ok": True}, status_code=200)
+
