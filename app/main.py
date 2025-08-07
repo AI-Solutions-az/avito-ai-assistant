@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from app.routes import chat
 from app.services.logs import logger
 from contextlib import asynccontextmanager
@@ -18,20 +19,32 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# УБИРАЕМ MIDDLEWARE ПОЛНОСТЬЮ - он мешал чтению body
 
-class LogRequestMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        body = await request.body()  # Асинхронное получение тела запроса
-        logger.info(f"New request: {request.method} {request.url}")
-        logger.info(f"Request body: {body.decode('utf-8')}")
+# ОБРАБОТЧИК ОШИБОК ВАЛИДАЦИИ
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Обработчик ошибок валидации Pydantic"""
+    logger.error(f"=== VALIDATION ERROR ===")
+    logger.error(f"URL: {request.method} {request.url}")
+    logger.error(f"Validation errors count: {len(exc.errors())}")
+    
+    for i, error in enumerate(exc.errors()):
+        logger.error(f"Error {i+1}:")
+        logger.error(f"  Location: {error['loc']}")
+        logger.error(f"  Message: {error['msg']}")
+        logger.error(f"  Type: {error['type']}")
+    
+    logger.error(f"=== END VALIDATION ERROR ===")
+    
+    return JSONResponse(
+        status_code=400,
+        content={
+            "detail": "Validation error",
+            "errors": exc.errors()
+        }
+    )
 
-        response = await call_next(request)  # Асинхронный вызов следующего обработчика
-        logger.info(f"Response: {response.status_code} {request.url}")
-        return response
-
-
-# Добавление middleware в приложение
-app.add_middleware(LogRequestMiddleware)
 
 # Подключаем маршруты
 app.include_router(chat.router, tags=["Chat"])
@@ -39,5 +52,9 @@ app.include_router(chat.router, tags=["Chat"])
 
 @app.get("/")
 async def read_root():
-    return {
-        "message": "AI Assistant is running!"}  # Эта функция уже асинхронная, так как FastAPI её по умолчанию обрабатывает асинхронно
+    return {"message": "AI Assistant is running!"}
+
+
+@app.get("/status") 
+async def status():
+    return {"status": "running", "message": "Server is working"}
