@@ -220,8 +220,20 @@ async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     """ Принимает сообщение и добавляет его в очередь обработки """
     chat_id = message.payload.value.chat_id
     
-    # 🎙️ Логируем тип входящего сообщения
+    # 🔍 ОТЛАДОЧНОЕ ЛОГИРОВАНИЕ - ВРЕМЕННО ДЛЯ АНАЛИЗА СТРУКТУРЫ
     message_type = message.payload.value.type
+    logger.info(f"[DEBUG] Тип сообщения: {message_type}")
+    logger.info(f"[DEBUG] Полная структура content: {message.payload.value.content}")
+    
+    if message_type == "voice":
+        logger.info(f"[DEBUG] Это голосовое сообщение!")
+        logger.info(f"[DEBUG] content.text: {getattr(message.payload.value.content, 'text', 'НЕТ')}")
+        logger.info(f"[DEBUG] content.url: {getattr(message.payload.value.content, 'url', 'НЕТ')}")
+        logger.info(f"[DEBUG] content.voice: {getattr(message.payload.value.content, 'voice', 'НЕТ')}")
+        logger.info(f"[DEBUG] Вызов is_voice_message(): {message.is_voice_message()}")
+        logger.info(f"[DEBUG] Вызов get_voice_url(): {message.get_voice_url()}")
+    
+    # Логируем тип входящего сообщения
     if message.is_voice_message():
         voice_url = message.get_voice_url()
         duration = message.get_voice_duration()
