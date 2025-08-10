@@ -185,7 +185,7 @@ class VoiceRecognition:
             logger.warning(f"[VoiceRecognition] Ошибка анализа метаданных: {e}")
             return None
 
-   async def process_voice_message(self, voice_url: str, chat_id: str, message_id: str, user_id: int) -> VoiceProcessingResult:
+    async def process_voice_message(self, voice_url: str, chat_id: str, message_id: str, user_id: int) -> VoiceProcessingResult:
         """
         Полный цикл обработки голосового сообщения
 
