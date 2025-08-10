@@ -83,14 +83,6 @@ async def message_collector(chat_id, message: WebhookRequest):
             await send_alert(f"💥 Критическая ошибка голосового модуля: {str(e)}", 0)
             return None
 
-    # 📝 ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ (существующая логика)
-    elif message.is_text_message():
-        message_text = message.get_message_text()
-        voice_alert = None  # Нет голосового сообщения
-    else:
-        logger.warning(f"[Message] Неизвестный тип сообщения: {message.payload.value.type}")
-        return None
-
     # Создание ссылки на чат
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
 
@@ -276,6 +268,7 @@ async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
 
     background_tasks.add_task(message_collector, chat_id, message)
     return JSONResponse(content={"ok": True}, status_code=200)
+
 
 
 
