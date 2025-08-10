@@ -33,6 +33,10 @@ async def message_collector(chat_id, message: WebhookRequest):
         logger.info(f"Пропуск системного сообщения...")
         return None
 
+    # Инициализируем переменные по умолчанию
+    message_text = ""
+    voice_alert = None
+
     # 🎙️ ОБРАБОТКА ГОЛОСОВЫХ СООБЩЕНИЙ
     if message.is_voice_message():
         logger.info(f"[VoiceMessage] Получено голосовое сообщение в чате {chat_id}")
@@ -82,6 +86,21 @@ async def message_collector(chat_id, message: WebhookRequest):
                                "Извините, произошла ошибка при обработке голосового сообщения. Попробуйте отправить текст.")
             await send_alert(f"💥 Критическая ошибка голосового модуля: {str(e)}", 0)
             return None
+
+    # 📝 ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ
+    elif message.is_text_message():
+        message_text = message.get_message_text()
+        voice_alert = None  # Нет голосового сообщения
+        
+    # ❌ НЕПОДДЕРЖИВАЕМЫЕ ТИПЫ СООБЩЕНИЙ
+    else:
+        logger.warning(f"[Message] Неподдерживаемый тип сообщения: {message.payload.value.type}")
+        return None
+
+    # Проверяем что у нас есть текст для обработки
+    if not message_text or not message_text.strip():
+        logger.warning(f"[Message] Пустое сообщение в чате {chat_id}")
+        return None
 
     # Создание ссылки на чат
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
@@ -268,6 +287,7 @@ async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
 
     background_tasks.add_task(message_collector, chat_id, message)
     return JSONResponse(content={"ok": True}, status_code=200)
+
 
 
 
