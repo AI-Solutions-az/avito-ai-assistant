@@ -185,14 +185,15 @@ class VoiceRecognition:
             logger.warning(f"[VoiceRecognition] Ошибка анализа метаданных: {e}")
             return None
 
-    async def process_voice_message(self, voice_url: str, chat_id: str, message_id: str) -> VoiceProcessingResult:
+   async def process_voice_message(self, voice_url: str, chat_id: str, message_id: str, user_id: int) -> VoiceProcessingResult:
         """
         Полный цикл обработки голосового сообщения
 
         Args:
-            voice_url: URL аудио файла от Avito
+            voice_url: voice_id голосового сообщения от Avito
             chat_id: ID чата
             message_id: ID сообщения
+            user_id: ID пользователя (для API запроса)
 
         Returns:
             VoiceProcessingResult: Результат обработки с текстом или ошибкой
@@ -211,8 +212,10 @@ class VoiceRecognition:
             result.status = VoiceProcessingStatus.DOWNLOADING
             logger.info(f"[VoiceRecognition] Этап 1: Скачивание аудио файла")
 
+            # voice_url здесь на самом деле voice_id
+            voice_id = voice_url
             file_path, download_error = await audio_downloader.download_voice_file(
-                voice_url, chat_id, message_id
+                voice_id, chat_id, message_id, user_id
             )
 
             if download_error or not file_path:
