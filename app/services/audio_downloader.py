@@ -24,46 +24,23 @@ class AudioDownloader:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"[AudioDownloader] Временная директория: {self.temp_dir}")
 
-    async def download_voice_file(self, voice_identifier: str, chat_id: str, message_id: str) -> Tuple[
+    async def download_voice_file(self, voice_id: str, chat_id: str, message_id: str, user_id: int) -> Tuple[
         Optional[str], Optional[VoiceError]]:
         """
-        Скачивает голосовой файл по URL или voice_id
+        Скачивает голосовой файл через официальный API Авито
 
         Args:
-            voice_identifier: URL аудио файла или voice_id от Avito
+            voice_id: ID голосового сообщения от Avito
             chat_id: ID чата для логирования
             message_id: ID сообщения для уникального имени файла
+            user_id: ID пользователя для API запроса
 
         Returns:
             Tuple[file_path, error]: Путь к скачанному файлу или ошибка
         """
-        logger.info(f"[AudioDownloader] Начинаем скачивание аудио для чата {chat_id}, сообщение {message_id}")
+        logger.info(f"[AudioDownloader] Начинаем скачивание голосового сообщения {voice_id}")
 
         try:
-            # Определяем это URL или voice_id
-            if voice_identifier.startswith('http'):
-                # Это прямой URL
-                voice_url = voice_identifier
-            else:
-                # Это voice_id, формируем URL для скачивания через Avito API
-                voice_url = f"https://api.avito.ru/messenger/v2/accounts/self/chats/{chat_id}/messages/{message_id}/voice"
-                logger.info(f"[AudioDownloader] Сформирован URL для voice_id: {voice_url}")
-
-            # Валидация URL
-            if not self._is_valid_url(voice_url):
-                error = VoiceError(
-                    code=VoiceErrorCodes.INVALID_URL,
-                    message=f"Некорректный URL: {voice_url}"
-                )
-                return None, error
-
-            # Генерируем уникальное имя файла
-            file_extension = self._extract_file_extension(voice_url)
-            filename = f"{chat_id}_{message_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
-            file_path = self.temp_dir / filename
-
-            logger.info(f"[AudioDownloader] Скачиваем в файл: {file_path}")
-
             # Получаем токен авторизации Avito
             try:
                 auth_token = await get_avito_token()
@@ -75,31 +52,87 @@ class AudioDownloader:
                 )
                 return None, error
 
-            # Скачиваем файл
+            # Шаг 1: Получаем URL голосового файла через официальный API
+            voice_url_api = f"https://api.avito.ru/messenger/v1/accounts/{user_id}/getVoiceFiles"
+            
+            headers = {
+                "Authorization": f"Bearer {auth_token}",
+                "User-Agent": "AvitoAI-Assistant/1.0",
+                "Accept": "application/json"
+            }
+            
+            params = {
+                "voice_ids": voice_id
+            }
+
+            logger.info(f"[AudioDownloader] Запрашиваем URL для voice_id: {voice_id}")
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                headers = {
-                    "Authorization": f"Bearer {auth_token}",
-                    "User-Agent": "AvitoAI-Assistant/1.0"
-                }
+                response = await client.get(voice_url_api, headers=headers, params=params)
+                
+                if response.status_code != 200:
+                    logger.error(f"[AudioDownloader] Ошибка получения URL: HTTP {response.status_code}")
+                    error = VoiceError(
+                        code=VoiceErrorCodes.DOWNLOAD_FAILED,
+                        message=f"Не удалось получить URL голосового файла: HTTP {response.status_code}"
+                    )
+                    return None, error
 
-                logger.info(f"[AudioDownloader] Отправляем запрос на {voice_url}")
+                # Парсим ответ
+                voice_data = response.json()
+                voices_urls = voice_data.get("voices_urls", {})
+                
+                if voice_id not in voices_urls:
+                    logger.error(f"[AudioDownloader] voice_id {voice_id} не найден в ответе API")
+                    error = VoiceError(
+                        code=VoiceErrorCodes.DOWNLOAD_FAILED,
+                        message=f"Голосовой файл {voice_id} не найден"
+                    )
+                    return None, error
 
-                # Для voice_id используем POST запрос, для прямого URL - GET
-                if voice_identifier.startswith('http'):
-                    request_method = "GET"
-                    request_data = None
-                else:
-                    request_method = "POST"
-                    request_data = {}  # Пустое тело для POST запроса
+                voice_file_url = voices_urls[voice_id]
+                logger.info(f"[AudioDownloader] Получен URL голосового файла: {voice_file_url}")
 
-                async with client.stream(request_method, voice_url, headers=headers, json=request_data) as response:
+            # Шаг 2: Скачиваем файл по полученному URL
+            return await self._download_file_from_url(voice_file_url, chat_id, message_id, voice_id)
+
+        except httpx.TimeoutException:
+            logger.error(f"[AudioDownloader] Таймаут при получении URL для voice_id: {voice_id}")
+            error = VoiceError(
+                code=VoiceErrorCodes.PROCESSING_TIMEOUT,
+                message=f"Превышен таймаут запроса URL ({self.timeout}с)"
+            )
+            return None, error
+
+        except Exception as e:
+            logger.error(f"[AudioDownloader] Неожиданная ошибка: {e}")
+            error = VoiceError(
+                code=VoiceErrorCodes.DOWNLOAD_FAILED,
+                message=f"Неожиданная ошибка: {str(e)}"
+            )
+            return None, error
+
+    async def _download_file_from_url(self, voice_file_url: str, chat_id: str, message_id: str, voice_id: str) -> Tuple[
+        Optional[str], Optional[VoiceError]]:
+        """
+        Скачивает файл по прямому URL
+        """
+        try:
+            # Генерируем уникальное имя файла (Авито использует opus в mp4 контейнере)
+            filename = f"{chat_id}_{message_id}_{voice_id[:8]}.mp4"
+            file_path = self.temp_dir / filename
+
+            logger.info(f"[AudioDownloader] Скачиваем файл в: {file_path}")
+
+            # Скачиваем файл (URL от Авито уже авторизован, дополнительные заголовки не нужны)
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                async with client.stream("GET", voice_file_url) as response:
                     # Проверяем статус ответа
                     if response.status_code != 200:
-                        logger.error(f"[AudioDownloader] HTTP ошибка: {response.status_code}")
+                        logger.error(f"[AudioDownloader] HTTP ошибка при скачивании: {response.status_code}")
                         error = VoiceError(
                             code=VoiceErrorCodes.DOWNLOAD_FAILED,
-                            message=f"HTTP {response.status_code}: {response.reason_phrase}",
-                            details={"status_code": response.status_code, "url": voice_url}
+                            message=f"HTTP {response.status_code} при скачивании файла"
                         )
                         return None, error
 
@@ -123,7 +156,7 @@ class AudioDownloader:
                             # Проверяем размер в процессе скачивания
                             if total_size > self.max_size_bytes:
                                 await file.close()
-                                file_path.unlink(missing_ok=True)  # Удаляем частично скачанный файл
+                                file_path.unlink(missing_ok=True)
 
                                 size_mb = total_size / (1024 * 1024)
                                 logger.error(f"[AudioDownloader] Файл превысил лимит размера: {size_mb:.1f} МБ")
@@ -149,30 +182,22 @@ class AudioDownloader:
             return str(file_path), None
 
         except httpx.TimeoutException:
-            logger.error(f"[AudioDownloader] Таймаут при скачивании файла: {voice_identifier}")
+            logger.error(f"[AudioDownloader] Таймаут при скачивании файла")
             error = VoiceError(
                 code=VoiceErrorCodes.PROCESSING_TIMEOUT,
                 message=f"Превышен таймаут скачивания ({self.timeout}с)"
             )
             return None, error
 
-        except httpx.RequestError as e:
-            logger.error(f"[AudioDownloader] Сетевая ошибка при скачивании: {e}")
-            error = VoiceError(
-                code=VoiceErrorCodes.NETWORK_ERROR,
-                message=f"Сетевая ошибка: {str(e)}"
-            )
-            return None, error
-
         except Exception as e:
-            logger.error(f"[AudioDownloader] Неожиданная ошибка при скачивании: {e}")
+            logger.error(f"[AudioDownloader] Ошибка при скачивании файла: {e}")
             # Удаляем файл если он был создан частично
             if 'file_path' in locals() and file_path.exists():
                 file_path.unlink(missing_ok=True)
 
             error = VoiceError(
                 code=VoiceErrorCodes.DOWNLOAD_FAILED,
-                message=f"Неожиданная ошибка: {str(e)}"
+                message=f"Ошибка скачивания: {str(e)}"
             )
             return None, error
 
@@ -183,24 +208,6 @@ class AudioDownloader:
             return all([result.scheme, result.netloc])
         except Exception:
             return False
-
-    def _extract_file_extension(self, url: str) -> str:
-        """Извлекает расширение файла из URL"""
-        try:
-            parsed_url = urlparse(url)
-            path = Path(parsed_url.path)
-            extension = path.suffix.lower().lstrip('.')
-
-            # Проверяем что расширение поддерживается
-            if extension in [fmt.value for fmt in AudioFormat]:
-                return extension
-            else:
-                logger.warning(f"[AudioDownloader] Неизвестное расширение '{extension}', используем 'ogg' по умолчанию")
-                return "ogg"  # Avito обычно использует ogg
-
-        except Exception:
-            logger.warning(f"[AudioDownloader] Не удалось определить расширение файла, используем 'ogg'")
-            return "ogg"
 
     async def cleanup_file(self, file_path: str) -> None:
         """Удаляет временный файл"""
