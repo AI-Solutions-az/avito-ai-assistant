@@ -27,49 +27,66 @@ processing_tasks = {}
 async def message_collector(chat_id, message: WebhookRequest):
     """ Добавляет сообщение в очередь и сбрасывает таймер ожидания """
     
-    # 🎙️ ОПРЕДЕЛЯЕМ ТИП СООБЩЕНИЯ И ПОЛУЧАЕМ ТЕКСТ
+   # 🎙️ ОПРЕДЕЛЯЕМ ТИП СООБЩЕНИЯ И ПОЛУЧАЕМ ТЕКСТ
     if message.is_voice_message():
         logger.info(f"[VoiceMessage] Получено голосовое сообщение в чате {chat_id}")
         
         # Проверяем включен ли модуль голосовых сообщений
         if not voice_recognition.is_voice_recognition_enabled():
             logger.info(f"[VoiceMessage] Голосовые сообщения отключены, пропускаем")
-            await send_alert("🎙️ Получено голосовое сообщение, но модуль отключен", 0)
             return None
 
-        # Обрабатываем голосовое сообщение
-        voice_url = message.get_voice_url()
+        # Получаем необходимые данные для обработки
+        voice_id = message.get_voice_id()  # Получаем voice_id
         message_id = message.payload.value.id
+        user_id = message.payload.value.user_id
+
+        if not voice_id:
+            logger.error(f"[VoiceMessage] Не удалось получить voice_id из сообщения")
+            await send_message(user_id, chat_id,
+                               "Извините, произошла ошибка при обработке голосового сообщения. Попробуйте отправить текст.")
+            return None
 
         try:
             # Распознаем голосовое сообщение
             voice_result = await voice_recognition.process_voice_message(
-                voice_url=voice_url,
+                voice_url=voice_id,  # Передаем voice_id как voice_url
                 chat_id=chat_id,
-                message_id=message_id
+                message_id=message_id,
+                user_id=user_id  # Добавляем user_id
             )
 
             if voice_result.status == VoiceProcessingStatus.COMPLETED and voice_result.transcribed_text:
                 # Успешно распознали - используем как текст
                 message_text = voice_result.transcribed_text
-                logger.info(f"[VoiceMessage] Голос распознан за {voice_result.processing_time:.2f}с: '{message_text[:50]}...'")
+                logger.info(f"[VoiceMessage] ✅ Голос распознан за {voice_result.processing_time:.2f}с: '{message_text[:50]}...'")
             else:
                 # Ошибка распознавания
                 error_msg = voice_result.error_message or "Неизвестная ошибка"
-                logger.error(f"[VoiceMessage] Ошибка распознавания голоса: {error_msg}")
+                logger.error(f"[VoiceMessage] ❌ Ошибка распознавания голоса: {error_msg}")
                 
-                user_id = message.payload.value.user_id
                 await send_message(user_id, chat_id,
                                    "Извините, не удалось распознать ваше голосовое сообщение. Пожалуйста, отправьте текстовое сообщение.")
-                await send_alert(f"❌ Ошибка распознавания голосового сообщения: {error_msg}", 0)
+                
+                # Безопасная отправка Telegram уведомления
+                try:
+                    await send_alert(f"❌ Ошибка распознавания голосового сообщения: {error_msg}", 0)
+                except Exception as telegram_error:
+                    logger.error(f"[VoiceMessage] Ошибка отправки Telegram уведомления: {telegram_error}")
+                
                 return None
 
         except Exception as e:
-            logger.error(f"[VoiceMessage] Критическая ошибка обработки голоса: {e}")
-            user_id = message.payload.value.user_id
+            logger.error(f"[VoiceMessage] 💥 Критическая ошибка обработки голоса: {e}")
             await send_message(user_id, chat_id,
                                "Извините, произошла ошибка при обработке голосового сообщения. Попробуйте отправить текст.")
-            await send_alert(f"💥 Критическая ошибка голосового модуля: {str(e)}", 0)
+            
+            # Безопасная отправка Telegram уведомления
+            try:
+                await send_alert(f"💥 Критическая ошибка голосового модуля: {str(e)}", 0)
+            except Exception as telegram_error:
+                logger.error(f"[VoiceMessage] Ошибка отправки Telegram уведомления: {telegram_error}")
+            
             return None
             
     elif message.is_text_message():
@@ -248,3 +265,4 @@ async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
 
     background_tasks.add_task(message_collector, chat_id, message)
     return JSONResponse(content={"ok": True}, status_code=200)
+
