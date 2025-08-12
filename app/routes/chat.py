@@ -25,87 +25,99 @@ processing_tasks = {}
 
 
 async def message_collector(chat_id, message: WebhookRequest):
-    """ Добавляет сообщение в очередь и сбрасывает таймер ожидания """
+    """Добавляет сообщение в очередь и сбрасывает таймер ожидания"""
     
-   # 🎙️ ОПРЕДЕЛЯЕМ ТИП СООБЩЕНИЯ И ПОЛУЧАЕМ ТЕКСТ
-    if message.is_voice_message():
-        logger.info(f"[VoiceMessage] Получено голосовое сообщение в чате {chat_id}")
-        
-        # Проверяем включен ли модуль голосовых сообщений
-        if not voice_recognition.is_voice_recognition_enabled():
-            logger.info(f"[VoiceMessage] Голосовые сообщения отключены, пропускаем")
-            return None
-
-        # Получаем необходимые данные для обработки
-        voice_id = message.get_voice_id()  # Получаем voice_id
-        message_id = message.payload.value.id
-        user_id = message.payload.value.user_id
-
-        if not voice_id:
-            logger.error(f"[VoiceMessage] Не удалось получить voice_id из сообщения")
-            await send_message(user_id, chat_id,
-                               "Извините, произошла ошибка при обработке голосового сообщения. Попробуйте отправить текст.")
-            return None
-
-        try:
-            # Распознаем голосовое сообщение
-            voice_result = await voice_recognition.process_voice_message(
-                voice_url=voice_id,  # Передаем voice_id как voice_url
-                chat_id=chat_id,
-                message_id=message_id,
-                user_id=user_id  # Добавляем user_id
-            )
-
-            if voice_result.status == VoiceProcessingStatus.COMPLETED and voice_result.transcribed_text:
-                # Успешно распознали - используем как текст
-                message_text = voice_result.transcribed_text
-                logger.info(f"[VoiceMessage] ✅ Голос распознан за {voice_result.processing_time:.2f}с: '{message_text[:50]}...'")
-            else:
-                # Ошибка распознавания
-                error_msg = voice_result.error_message or "Неизвестная ошибка"
-                logger.error(f"[VoiceMessage] ❌ Ошибка распознавания голоса: {error_msg}")
-                
-                await send_message(user_id, chat_id,
-                                   "Извините, не удалось распознать ваше голосовое сообщение. Пожалуйста, отправьте текстовое сообщение.")
-                
-                # Безопасная отправка Telegram уведомления
-                try:
-                    await send_alert(f"❌ Ошибка распознавания голосового сообщения: {error_msg}", 0)
-                except Exception as telegram_error:
-                    logger.error(f"[VoiceMessage] Ошибка отправки Telegram уведомления: {telegram_error}")
-                
-                return None
-
-        except Exception as e:
-            logger.error(f"[VoiceMessage] 💥 Критическая ошибка обработки голоса: {e}")
-            await send_message(user_id, chat_id,
-                               "Извините, произошла ошибка при обработке голосового сообщения. Попробуйте отправить текст.")
-            
-            # Безопасная отправка Telegram уведомления
-            try:
-                await send_alert(f"💥 Критическая ошибка голосового модуля: {str(e)}", 0)
-            except Exception as telegram_error:
-                logger.error(f"[VoiceMessage] Ошибка отправки Telegram уведомления: {telegram_error}")
-            
-            return None
-            
-    elif message.is_text_message():
-        # Обычное текстовое сообщение
-        message_text = message.payload.value.content.text
-    else:
-        # Неподдерживаемый тип сообщения
-        logger.warning(f"[Message] Неподдерживаемый тип сообщения: {message.payload.value.type}")
-        return None
-
-    # 📝 ВСЯ ОСТАЛЬНАЯ ЛОГИКА ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ
     user_id = message.payload.value.user_id
     author_id = message.payload.value.author_id
     item_id = message.payload.value.item_id
     
+    # Пропускаем системные сообщения
     if str(message.payload.value.author_id) == "0":
         logger.info(f"Пропуск системного сообщения...")
         return None
 
+    # 🎙️ ПРОВЕРКА ФИЧА-ФЛАГА ГОЛОСОВЫХ СООБЩЕНИЙ
+    if Settings.VOICE_RECOGNITION_ENABLED:
+        # ОБРАБОТКА ГОЛОСОВЫХ СООБЩЕНИЙ
+        if message.is_voice_message():
+            logger.info(f"[VoiceMessage] Получено голосовое сообщение в чате {chat_id}")
+            
+            # Получаем необходимые данные для обработки
+            voice_url = message.get_voice_url()
+            message_id = message.payload.value.id
+
+            if not voice_url:
+                logger.error(f"[VoiceMessage] Не удалось получить voice_url из сообщения")
+                await send_message(user_id, chat_id,
+                                   "Извините, произошла ошибка при обработке голосового сообщения. Попробуйте отправить текст.")
+                return None
+
+            try:
+                # Распознаем голосовое сообщение
+                voice_result = await voice_recognition.process_voice_message(
+                    voice_url=voice_url,
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    user_id=user_id
+                )
+
+                if voice_result.status == VoiceProcessingStatus.COMPLETED and voice_result.transcribed_text:
+                    # Успешно распознали - используем как текст
+                    message_text = voice_result.transcribed_text
+                    logger.info(f"[VoiceMessage] ✅ Голос распознан за {voice_result.processing_time:.2f}с: '{message_text[:50]}...'")
+                else:
+                    # Ошибка распознавания
+                    error_msg = voice_result.error_message or "Неизвестная ошибка"
+                    logger.error(f"[VoiceMessage] ❌ Ошибка распознавания голоса: {error_msg}")
+                    
+                    await send_message(user_id, chat_id,
+                                       "Извините, не удалось распознать ваше голосовое сообщение. Пожалуйста, отправьте текстовое сообщение.")
+                    
+                    # Безопасная отправка Telegram уведомления
+                    try:
+                        await send_alert(f"❌ Ошибка распознавания голосового сообщения: {error_msg}", 0)
+                    except Exception as telegram_error:
+                        logger.error(f"[VoiceMessage] Ошибка отправки Telegram уведомления: {telegram_error}")
+                    
+                    return None
+
+            except Exception as e:
+                logger.error(f"[VoiceMessage] 💥 Критическая ошибка обработки голоса: {e}")
+                await send_message(user_id, chat_id,
+                                   "Извините, произошла ошибка при обработке голосового сообщения. Попробуйте отправить текст.")
+                
+                # Безопасная отправка Telegram уведомления
+                try:
+                    await send_alert(f"💥 Критическая ошибка голосового модуля: {str(e)}", 0)
+                except Exception as telegram_error:
+                    logger.error(f"[VoiceMessage] Ошибка отправки Telegram уведомления: {telegram_error}")
+                
+                return None
+                
+    else:
+        # 🚫 ГОЛОСОВЫЕ СООБЩЕНИЯ ОТКЛЮЧЕНЫ
+        if message.is_voice_message():
+            logger.info(f"[VoiceMessage] Голосовые сообщения отключены, пропускаем")
+            await send_message(user_id, chat_id,
+                               "Извините, обработка голосовых сообщений временно недоступна. Пожалуйста, отправьте текстовое сообщение.")
+            
+            # Безопасная отправка Telegram уведомления
+            try:
+                await send_alert("🎙️ Получено голосовое сообщение, но модуль отключен", 0)
+            except Exception as telegram_error:
+                logger.error(f"[VoiceMessage] Ошибка отправки Telegram уведомления: {telegram_error}")
+            
+            return None
+
+    # 📝 ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ
+    if message.is_text_message():
+        message_text = message.payload.value.content.text
+    elif not message.is_voice_message():
+        # Неподдерживаемый тип сообщения (не текст и не голос)
+        logger.warning(f"[Message] Неподдерживаемый тип сообщения: {message.payload.value.type}")
+        return None
+
+    # 📝 ВСЯ ОСТАЛЬНАЯ ЛОГИКА ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ
     # Создание ссылки на чат
     chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
 
@@ -176,7 +188,7 @@ async def message_collector(chat_id, message: WebhookRequest):
     
     # 🎙️ Создаем объект сообщения с распознанным текстом для голосовых
     message_for_queue = message
-    if message.is_voice_message():
+    if message.is_voice_message() and Settings.VOICE_RECOGNITION_ENABLED:
         # Создаем копию сообщения с замененным текстом
         message_for_queue.payload.value.content.text = message_text
         
@@ -265,4 +277,3 @@ async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
 
     background_tasks.add_task(message_collector, chat_id, message)
     return JSONResponse(content={"ok": True}, status_code=200)
-
