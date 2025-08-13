@@ -58,7 +58,7 @@ class WebhookRequest(BaseModel):
     timestamp: int
     payload: Payload
 
-    def is_voice_message(self) -> bool:
+    async def is_voice_message(self) -> bool:
         """Проверяет является ли сообщение голосовым"""
         return (
             self.payload.value.type == "voice" and (
@@ -69,7 +69,7 @@ class WebhookRequest(BaseModel):
             )
         )
 
-    def is_text_message(self) -> bool:
+    async def is_text_message(self) -> bool:
         """Проверяет является ли сообщение текстовым"""
         return (
                 self.payload.value.type == "text" and
@@ -77,15 +77,15 @@ class WebhookRequest(BaseModel):
                 self.payload.value.content.text.strip() != ""
         )
 
-    def get_message_text(self) -> Optional[str]:
+    async def get_message_text(self) -> Optional[str]:
         """Возвращает текст сообщения (для текстовых сообщений)"""
-        if self.is_text_message():
+        if await self.is_text_message():
             return self.payload.value.content.text
         return None
 
-    def get_voice_url(self) -> Optional[str]:
+    async def get_voice_url(self) -> Optional[str]:
         """Возвращает URL голосового сообщения или voice_id"""
-        if self.is_voice_message():
+        if await self.is_voice_message():
             # Если есть прямой URL
             if self.payload.value.content.url:
                 return self.payload.value.content.url
@@ -94,15 +94,15 @@ class WebhookRequest(BaseModel):
                 return self.payload.value.content.voice.voice_id  # Вернем voice_id, URL сформируем позже
         return None
 
-    def get_voice_duration(self) -> Optional[int]:
+    async def get_voice_duration(self) -> Optional[int]:
         """Возвращает длительность голосового сообщения в секундах"""
-        if self.is_voice_message():
+        if await self.is_voice_message():
             return self.payload.value.content.duration
         return None
 
-    def get_voice_id(self) -> Optional[str]:
+    async def get_voice_id(self) -> Optional[str]:
         """Возвращает voice_id для голосового сообщения"""
-        if (self.is_voice_message() and 
+        if (await self.is_voice_message() and 
             self.payload.value.content.voice and 
             self.payload.value.content.voice.voice_id):
             return self.payload.value.content.voice.voice_id
