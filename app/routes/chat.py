@@ -39,11 +39,11 @@ async def message_collector(chat_id, message: WebhookRequest):
     # 🎙️ ПРОВЕРКА ФИЧА-ФЛАГА ГОЛОСОВЫХ СООБЩЕНИЙ
     if Settings.VOICE_RECOGNITION_ENABLED:
         # ОБРАБОТКА ГОЛОСОВЫХ СООБЩЕНИЙ
-        if message.is_voice_message():
+        if await message.is_voice_message():
             logger.info(f"[VoiceMessage] Получено голосовое сообщение в чате {chat_id}")
             
             # Получаем необходимые данные для обработки
-            voice_url = message.get_voice_url()
+            voice_url = await message.get_voice_url()
             message_id = message.payload.value.id
 
             if not voice_url:
@@ -96,7 +96,7 @@ async def message_collector(chat_id, message: WebhookRequest):
                 
     else:
         # 🚫 ГОЛОСОВЫЕ СООБЩЕНИЯ ОТКЛЮЧЕНЫ
-        if message.is_voice_message():
+        if await message.is_voice_message():
             logger.info(f"[VoiceMessage] Голосовые сообщения отключены, пропускаем")
             await send_message(user_id, chat_id,
                                "Извините, обработка голосовых сообщений временно недоступна. Пожалуйста, отправьте текстовое сообщение.")
@@ -110,9 +110,9 @@ async def message_collector(chat_id, message: WebhookRequest):
             return None
 
     # 📝 ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ
-    if message.is_text_message():
+    if await message.is_text_message():
         message_text = message.payload.value.content.text
-    elif not message.is_voice_message():
+    elif not await message.is_voice_message():
         # Неподдерживаемый тип сообщения (не текст и не голос)
         logger.warning(f"[Message] Неподдерживаемый тип сообщения: {message.payload.value.type}")
         return None
@@ -188,7 +188,7 @@ async def message_collector(chat_id, message: WebhookRequest):
     
     # 🎙️ Создаем объект сообщения с распознанным текстом для голосовых
     message_for_queue = message
-    if message.is_voice_message() and Settings.VOICE_RECOGNITION_ENABLED:
+    if await message.is_voice_message() and Settings.VOICE_RECOGNITION_ENABLED:
         # Создаем копию сообщения с замененным текстом
         message_for_queue.payload.value.content.text = message_text
         
@@ -259,18 +259,18 @@ async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
         logger.info(f"[DEBUG] content.text: {getattr(message.payload.value.content, 'text', 'НЕТ')}")
         logger.info(f"[DEBUG] content.url: {getattr(message.payload.value.content, 'url', 'НЕТ')}")
         logger.info(f"[DEBUG] content.voice: {getattr(message.payload.value.content, 'voice', 'НЕТ')}")
-        logger.info(f"[DEBUG] Вызов is_voice_message(): {message.is_voice_message()}")
-        logger.info(f"[DEBUG] Вызов get_voice_url(): {message.get_voice_url()}")
+        logger.info(f"[DEBUG] Вызов is_voice_message(): {await message.is_voice_message()}")
+        logger.info(f"[DEBUG] Вызов get_voice_url(): {await message.get_voice_url()}")
     
     # Логируем тип входящего сообщения
-    if message.is_voice_message():
-        voice_url = message.get_voice_url()
-        duration = message.get_voice_duration()
+    if await message.is_voice_message():
+        voice_url = await message.get_voice_url()
+        duration = await message.get_voice_duration()
         duration_str = f" ({duration}с)" if duration else ""
         logger.info(f"[Webhook] Получено голосовое сообщение{duration_str} в чате {chat_id}: {voice_url}")
-    elif message.is_text_message():
-        text_preview = message.get_message_text()[:50] + "..." if len(
-            message.get_message_text() or "") > 50 else message.get_message_text()
+    elif await message.is_text_message():
+        text_preview = await message.get_message_text()
+        text_preview = text_preview[:50] + "..." if len(text_preview or "") > 50 else text_preview
         logger.info(f"[Webhook] Получено текстовое сообщение в чате {chat_id}: '{text_preview}'")
     else:
         logger.warning(f"[Webhook] Получено сообщение неизвестного типа '{message_type}' в чате {chat_id}")
