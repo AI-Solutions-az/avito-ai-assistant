@@ -144,9 +144,11 @@ async def message_collector(chat_id, message: WebhookRequest):
         return None
 
     if Settings.WORKING_TIME_LOGIC:
-        # Используем уже рассчитанное значение is_night_time
+        # Рассчитываем время только при включенном фича-флаге
+        current_time = datetime.now().time()
+        
         # Дневной режим (10:00 - 22:00)
-        if not is_night_time:
+        if not (time(22, 0) <= current_time or current_time <= time(10, 0)):
             # Если сообщение от менеджера - ставим метку
             if str(author_id) == str(user_id):
                 await update_chat(
@@ -155,7 +157,7 @@ async def message_collector(chat_id, message: WebhookRequest):
                 )
                 logger.info(f"[Logic] Менеджер активен в чате {chat_id}")
                 return None
-            logger.info(f"[Logic] Получено сообщение от пользователя в нерабочее время {chat_id}")
+            logger.info(f"[Logic] Получено сообщение от пользователя в дневное время {chat_id}")
             return None  # Бот не обрабатывает сообщения днем
 
         # Ночной режим (22:00 - 10:00)
