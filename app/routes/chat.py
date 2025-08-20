@@ -126,17 +126,16 @@ async def message_collector(chat_id, message: WebhookRequest):
 
     # Получение информации по пользователю
     user_name, user_url = await get_user_info(user_id, chat_id)
-    current_time = datetime.now().time()
-    is_night_time = time(22, 0) <= current_time or current_time <= time(10, 0)
 
     # Проверка существования чата в БД AIvito
     if not await get_chat_by_id(chat_id):
         logger.info(f"[Logic] Чат {chat_id} отсутствует")
         thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')
-        await create_chat(chat_id, thread_id, author_id, user_id, chat_url, under_assistant=is_night_time)
+        # ИСПРАВЛЕНИЕ: Все новые чаты создаются с включенным ассистентом по умолчанию
+        await create_chat(chat_id, thread_id, author_id, user_id, chat_url, under_assistant=True)
         await send_alert(f"Создан новый чат\nКлиент: {user_name}\nСсылка на клиента: {user_url}\n"
                          f"Объявление: {ad_url}\nСссылка на чат: {chat_url}\n", thread_id)
-        logger.info(f"[Logic] Создан новый чат {chat_id}")
+        logger.info(f"[Logic] Создан новый чат {chat_id} с включенным ассистентом")
 
     chat_object = await get_chat_by_id(chat_id)
 
@@ -145,6 +144,7 @@ async def message_collector(chat_id, message: WebhookRequest):
         return None
 
     if Settings.WORKING_TIME_LOGIC:
+        # Используем уже рассчитанное значение is_night_time
         # Дневной режим (10:00 - 22:00)
         if not is_night_time:
             # Если сообщение от менеджера - ставим метку
@@ -154,6 +154,7 @@ async def message_collector(chat_id, message: WebhookRequest):
                     under_assistant=False  # Менеджер работает самостоятельно
                 )
                 logger.info(f"[Logic] Менеджер активен в чате {chat_id}")
+                return None
             logger.info(f"[Logic] Получено сообщение от пользователя в нерабочее время {chat_id}")
             return None  # Бот не обрабатывает сообщения днем
 
@@ -170,6 +171,7 @@ async def message_collector(chat_id, message: WebhookRequest):
                     logger.info(f'[Logic] К чату {chat_id} подключился оператор')
                 return None
 
+    # Логика при отключенном WORKING_TIME_LOGIC остается прежней
     if user_id == author_id:
         last_message = await get_latest_message_by_chat_id(chat_id)
         if last_message == message_text:
