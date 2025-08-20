@@ -246,6 +246,7 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
 
 @router.post("/chat")
 async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
+    print('test1')
     """ Принимает сообщение и добавляет его в очередь обработки """
     chat_id = message.payload.value.chat_id
     
