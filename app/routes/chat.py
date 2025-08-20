@@ -30,7 +30,8 @@ async def message_collector(chat_id, message: WebhookRequest):
     user_id = message.payload.value.user_id
     author_id = message.payload.value.author_id
     item_id = message.payload.value.item_id
-    
+    message_text = message.payload.value.content.text
+
     # Пропускаем системные сообщения
     if str(message.payload.value.author_id) == "0":
         logger.info(f"Пропуск системного сообщения...")
