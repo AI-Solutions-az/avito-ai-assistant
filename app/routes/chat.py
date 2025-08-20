@@ -253,27 +253,15 @@ async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
     message_type = message.payload.value.type
     logger.info(f"[DEBUG] Тип сообщения: {message_type}")
     logger.info(f"[DEBUG] Полная структура content: {message.payload.value.content}")
-    
-    if message_type == "voice":
-        logger.info(f"[DEBUG] Это голосовое сообщение!")
-        logger.info(f"[DEBUG] content.text: {getattr(message.payload.value.content, 'text', 'НЕТ')}")
-        logger.info(f"[DEBUG] content.url: {getattr(message.payload.value.content, 'url', 'НЕТ')}")
-        logger.info(f"[DEBUG] content.voice: {getattr(message.payload.value.content, 'voice', 'НЕТ')}")
-        logger.info(f"[DEBUG] Вызов is_voice_message(): {await message.is_voice_message()}")
-        logger.info(f"[DEBUG] Вызов get_voice_url(): {await message.get_voice_url()}")
-    
+
     # Логируем тип входящего сообщения
     if await message.is_voice_message():
-        voice_url = await message.get_voice_url()
-        duration = await message.get_voice_duration()
-        duration_str = f" ({duration}с)" if duration else ""
-        logger.info(f"[Webhook] Получено голосовое сообщение{duration_str} в чате {chat_id}: {voice_url}")
+        logger.info(f"[Webhook] Получено голосовое сообщение в чате {chat_id}")
     elif await message.is_text_message():
-        text_preview = await message.get_message_text()
-        text_preview = text_preview[:50] + "..." if len(text_preview or "") > 50 else text_preview
-        logger.info(f"[Webhook] Получено текстовое сообщение в чате {chat_id}: '{text_preview}'")
+        logger.info(f"[Webhook] Получено текстовое сообщение в чате {chat_id}")
     else:
         logger.warning(f"[Webhook] Получено сообщение неизвестного типа '{message_type}' в чате {chat_id}")
+        return JSONResponse(content={"ok": True}, status_code=200)
 
     background_tasks.add_task(message_collector, chat_id, message)
     return JSONResponse(content={"ok": True}, status_code=200)
