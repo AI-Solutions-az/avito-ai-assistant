@@ -87,11 +87,20 @@ def check_escalation_keywords(message_text: str) -> tuple[bool, list[str]]:
 
 async def message_collector(chat_id, message: WebhookRequest):
     """Добавляет сообщение в очередь и сбрасывает таймер ожидания"""
-
+    message_type = message.payload.value.type
     user_id = message.payload.value.user_id
     author_id = message.payload.value.author_id
     item_id = message.payload.value.item_id
     message_text = message.payload.value.content.text
+
+    # Логируем тип входящего сообщения
+    if await message.is_voice_message():
+        logger.info(f"[Webhook] Получено голосовое сообщение в чате {chat_id}")
+    elif await message.is_text_message():
+        logger.info(f"[Webhook] Получено текстовое сообщение в чате {chat_id}")
+    else:
+        logger.warning(f"[Webhook] Получено сообщение неизвестного типа '{message_type}' в чате {chat_id}")
+        return None
 
     # Пропускаем системные сообщения
     if str(message.payload.value.author_id) == "0":
@@ -368,23 +377,9 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
 
 @router.post("/chat")
 async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
-    print('test1')
     """ Принимает сообщение и добавляет его в очередь обработки """
     chat_id = message.payload.value.chat_id
-
-    # 🔍 ОТЛАДОЧНОЕ ЛОГИРОВАНИЕ - ВРЕМЕННО ДЛЯ АНАЛИЗА СТРУКТУРЫ
-    message_type = message.payload.value.type
-    logger.info(f"[DEBUG] Тип сообщения: {message_type}")
-    logger.info(f"[DEBUG] Полная структура content: {message.payload.value.content}")
-
-    # Логируем тип входящего сообщения
-    if await message.is_voice_message():
-        logger.info(f"[Webhook] Получено голосовое сообщение в чате {chat_id}")
-    elif await message.is_text_message():
-        logger.info(f"[Webhook] Получено текстовое сообщение в чате {chat_id}")
-    else:
-        logger.warning(f"[Webhook] Получено сообщение неизвестного типа '{message_type}' в чате {chat_id}")
-        return JSONResponse(content={"ok": True}, status_code=200)
-
     background_tasks.add_task(message_collector, chat_id, message)
     return JSONResponse(content={"ok": True}, status_code=200)
+
+

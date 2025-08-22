@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 class Settings:
     WORKING_TIME_LOGIC: bool = False # Фича-флаг управления новой логикой дня/ночи
     VOICE_RECOGNITION_ENABLED: bool = True # Обработка голосовых сообщений
-	AUTO_ESCALATION_ENABLED: bool = True  # Автоматический вызов оператора по ключевым словам
+    AUTO_ESCALATION_ENABLED: bool = True  # Автоматический вызов оператора по ключевым словам
     WHISPER_MODEL: str = "whisper-1"
     MAX_AUDIO_SIZE_MB: int = 25
     AUDIO_TEMP_DIR: str = str(Path(tempfile.gettempdir()) / "avito_voice_messages")
