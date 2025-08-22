@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 class Settings:
     WORKING_TIME_LOGIC: bool = False # Фича-флаг управления новой логикой дня/ночи
     VOICE_RECOGNITION_ENABLED: bool = True # Обработка голосовых сообщений
+	AUTO_ESCALATION_ENABLED: bool = True  # Автоматический вызов оператора по ключевым словам
     WHISPER_MODEL: str = "whisper-1"
     MAX_AUDIO_SIZE_MB: int = 25
     AUDIO_TEMP_DIR: str = str(Path(tempfile.gettempdir()) / "avito_voice_messages")
@@ -73,4 +74,5 @@ You are a sales manager providing product information to customers. Try answer s
     - When mentioning product categories, use the category name from the stock information if available
 
 '''
+
 
