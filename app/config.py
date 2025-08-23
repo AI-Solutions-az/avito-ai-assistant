@@ -5,7 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 class Settings:
-    WORKING_TIME_LOGIC: bool = False # Фича-флаг управления новой логикой дня/ночи
+    WORKING_TIME_LOGIC: bool = True # Фича-флаг управления новой логикой дня/ночи
     VOICE_RECOGNITION_ENABLED: bool = True # Обработка голосовых сообщений
     AUTO_ESCALATION_ENABLED: bool = True  # Автоматический вызов оператора по ключевым словам
     WHISPER_MODEL: str = "whisper-1"
