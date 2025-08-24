@@ -190,7 +190,7 @@ async def message_collector(chat_id, message: WebhookRequest):
         return None
 
     # 🚨 ПРОВЕРКА АВТОЭСКАЛАЦИИ ПО КЛЮЧЕВЫМ СЛОВАМ
-    if Settings.AUTO_ESCALATION_ENABLED and message_text:
+    if Settings.AUTO_ESCALATION_ENABLED and message_text and author_id!=user_id:
         needs_escalation, matched_keywords = check_escalation_keywords(message_text)
 
         if needs_escalation:
