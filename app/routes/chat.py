@@ -93,19 +93,66 @@ async def message_collector(chat_id, message: WebhookRequest):
     item_id = message.payload.value.item_id
     message_text = message.payload.value.content.text
 
-    # Логируем тип входящего сообщения
-    if await message.is_voice_message():
-        logger.info(f"[Webhook] Получено голосовое сообщение в чате {chat_id}")
-    elif await message.is_text_message():
-        logger.info(f"[Webhook] Получено текстовое сообщение в чате {chat_id}")
-    else:
-        logger.warning(f"[Webhook] Получено сообщение неизвестного типа '{message_type}' в чате {chat_id}")
-        return None
-
     # Пропускаем системные сообщения
     if str(message.payload.value.author_id) == "0":
         logger.info(f"Пропуск системного сообщения...")
         return None
+
+    # Создание ссылки на чат
+    chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
+
+    # Получение ссылки на объявление, по которому было сообщение
+    ad_url = await get_ad(user_id, item_id)
+
+    # Получение информации по пользователю
+    user_name, user_url = await get_user_info(user_id, chat_id)
+
+    # Проверка существования чата в БД AIvito
+    if not await get_chat_by_id(chat_id):
+        logger.info(f"[Logic] Чат {chat_id} отсутствует")
+        thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')
+        # ИСПРАВЛЕНИЕ: Все новые чаты создаются с включенным ассистентом по умолчанию
+        await create_chat(chat_id, thread_id, author_id, user_id, chat_url, under_assistant=True)
+        await send_alert(f"Создан новый чат\nКлиент: {user_name}\nСсылка на клиента: {user_url}\n"
+                         f"Объявление: {ad_url}\nСссылка на чат: {chat_url}\n", thread_id)
+        logger.info(f"[Logic] Создан новый чат {chat_id} с включенным ассистентом")
+
+    chat_object = await get_chat_by_id(chat_id)
+
+    if chat_object.under_assistant is False:
+        logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
+        return None
+
+
+    if Settings.WORKING_TIME_LOGIC:
+        # Рассчитываем время только при включенном фича-флаге
+        current_time = datetime.now().time()
+
+        # Дневной режим (10:00 - 22:00)
+        if not (time(22, 0) <= current_time or current_time <= time(10, 0)):
+            # Если сообщение от менеджера - ставим метку
+            if str(author_id) == str(user_id):
+                await update_chat(
+                    chat_id=chat_id,
+                    under_assistant=False  # Менеджер работает самостоятельно
+                )
+                logger.info(f"[Logic] Менеджер активен в чате {chat_id}")
+                return None
+            logger.info(f"[Logic] Получено сообщение от пользователя в дневное время {chat_id}")
+            return None  # Бот не обрабатывает сообщения днем
+
+        # Ночной режим (22:00 - 10:00)
+        else:
+            # Создание/обновление чата в БД (обязательно для всех сообщений)
+            if user_id == author_id:
+                last_message = await get_latest_message_by_chat_id(chat_id)
+                if last_message == message_text:
+                    logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
+                else:
+                    await update_chat(chat_id=chat_id, under_assistant=False)
+                    await send_alert("❗️К чату подключился оператор", chat_object.thread_id)
+                    logger.info(f'[Logic] К чату {chat_id} подключился оператор')
+                return None
 
     # 🎙️ ПРОВЕРКА ФИЧА-ФЛАГА ГОЛОСОВЫХ СООБЩЕНИЙ
     if Settings.VOICE_RECOGNITION_ENABLED:
@@ -241,62 +288,6 @@ async def message_collector(chat_id, message: WebhookRequest):
                 logger.error(f"[AutoEscalation] ❌ Ошибка отправки сообщения клиенту: {send_error}")
 
             return None  # Прекращаем обработку, передали оператору
-
-    # 📝 ВСЯ ОСТАЛЬНАЯ ЛОГИКА ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ
-    # Создание ссылки на чат
-    chat_url = f'https://www.avito.ru/profile/messenger/channel/{chat_id}'
-
-    # Получение ссылки на объявление, по которому было сообщение
-    ad_url = await get_ad(user_id, item_id)
-
-    # Получение информации по пользователю
-    user_name, user_url = await get_user_info(user_id, chat_id)
-
-    # Проверка существования чата в БД AIvito
-    if not await get_chat_by_id(chat_id):
-        logger.info(f"[Logic] Чат {chat_id} отсутствует")
-        thread_id = await create_telegram_forum_topic(f'{user_name}, {item_id}')
-        # ИСПРАВЛЕНИЕ: Все новые чаты создаются с включенным ассистентом по умолчанию
-        await create_chat(chat_id, thread_id, author_id, user_id, chat_url, under_assistant=True)
-        await send_alert(f"Создан новый чат\nКлиент: {user_name}\nСсылка на клиента: {user_url}\n"
-                         f"Объявление: {ad_url}\nСссылка на чат: {chat_url}\n", thread_id)
-        logger.info(f"[Logic] Создан новый чат {chat_id} с включенным ассистентом")
-
-    chat_object = await get_chat_by_id(chat_id)
-
-    if chat_object.under_assistant is False:
-        logger.info(f'[Logic] Чат бот отключен в чате {chat_id} для юзера {user_id}')
-        return None
-
-    if Settings.WORKING_TIME_LOGIC:
-        # Рассчитываем время только при включенном фича-флаге
-        current_time = datetime.now().time()
-
-        # Дневной режим (10:00 - 22:00)
-        if not (time(22, 0) <= current_time or current_time <= time(10, 0)):
-            # Если сообщение от менеджера - ставим метку
-            if str(author_id) == str(user_id):
-                await update_chat(
-                    chat_id=chat_id,
-                    under_assistant=False  # Менеджер работает самостоятельно
-                )
-                logger.info(f"[Logic] Менеджер активен в чате {chat_id}")
-                return None
-            logger.info(f"[Logic] Получено сообщение от пользователя в дневное время {chat_id}")
-            return None  # Бот не обрабатывает сообщения днем
-
-        # Ночной режим (22:00 - 10:00)
-        else:
-            # Создание/обновление чата в БД (обязательно для всех сообщений)
-            if user_id == author_id:
-                last_message = await get_latest_message_by_chat_id(chat_id)
-                if last_message == message_text:
-                    logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
-                else:
-                    await update_chat(chat_id=chat_id, under_assistant=False)
-                    await send_alert("❗️К чату подключился оператор", chat_object.thread_id)
-                    logger.info(f'[Logic] К чату {chat_id} подключился оператор')
-                return None
 
     # Логика при отключенном WORKING_TIME_LOGIC остается прежней
     if user_id == author_id:
