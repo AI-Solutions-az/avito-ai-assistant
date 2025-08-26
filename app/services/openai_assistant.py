@@ -307,11 +307,6 @@ class AssistantManager:
 
                 # Submit the tool outputs and wait for completion
                 if tool_outputs:
-                    # Check if finish_communication was called
-                    if any(json.loads(output["output"]).get("message") == "Communication finished"
-                           for output in tool_outputs):
-                        logger.info(f"[Assistant] Finishing communication for chat {chat_id}")
-                        return "Communication finished"
 
                     run = self.client.beta.threads.runs.submit_tool_outputs_and_poll(
                         thread_id=thread_id,
