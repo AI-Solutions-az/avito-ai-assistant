@@ -360,6 +360,8 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
         logger.error(f'[Logic] Не получен ответ от модели в чате {chat_id}')
     elif response == 'Communication finished':
         logger.info(f'[Logic] Коммуникация завершена {chat_id}')
+        await send_alert(f"💁‍♂️ {user_name}: {combined_message}\n🤖 Бот: Коммуникация завершена\n_____\n\n",
+                         thread_id=thread_id)
     else:
         logger.info(f"[Logic] Чат {chat_id}\n"
                     f"Ответ модели: {response}")
