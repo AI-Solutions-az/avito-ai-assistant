@@ -209,7 +209,7 @@ class AssistantManager:
                 thread_id=thread_id,
                 assistant_id=self.assistant_id
             )
-
+            function_name = None
             # Handle tool calls/function calls if any
             if run.required_action:
                 tool_outputs = []
@@ -311,6 +311,10 @@ class AssistantManager:
                         run_id=run.id,
                         tool_outputs=tool_outputs
                     )
+            # Тут эта проверка, так как обязательно нужно условие выше. Если выйти из функции раньше, то заблокируем тред
+            if function_name == 'finish_communication':
+                return "Communication finished"
+
 
             # Get the messages after the run is complete
             messages = self.client.beta.threads.messages.list(
