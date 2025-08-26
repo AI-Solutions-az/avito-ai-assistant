@@ -302,8 +302,6 @@ class AssistantManager:
                             "output": json.dumps({"status": "success", "message": "Communication finished"})
                         })
 
-                        # Return special value to indicate communication is finished
-                        return "Communication finished"
 
                 # Submit the tool outputs and wait for completion
                 if tool_outputs:
