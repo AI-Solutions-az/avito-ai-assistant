@@ -10,6 +10,7 @@ from db.returns_crud import create_return
 from db.orders_crud import create_order
 from db.chat_crud import update_chat
 
+
 class AssistantManager:
     def __init__(self):
         self.client = OpenAI(api_key=OPENAI_API_KEY)
@@ -70,6 +71,18 @@ class AssistantManager:
                                 "required": ["date_of_order", "reason"]
                             }
                         }
+                    },
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "finish_communication",
+                            "description": "Finish communication when client sends a final message like 'Thank you', 'Order placed', 'Thanks, I ordered' or any other message indicating the conversation goal has been achieved and no further assistance is needed",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {},
+                                "required": []
+                            }
+                        }
                     }
                 ],
                 model="gpt-4o-mini"  # You can adjust this to the model you want
@@ -115,7 +128,6 @@ class AssistantManager:
             thread = self.client.beta.threads.create()
             logger.info(f"[Assistant] Created new OpenAI thread: {thread.id}")
             return thread.id
-
 
     async def process_message(self, client_id, user_id, chat_id, message, ad_url, client_name, chat_url):
         """
@@ -216,7 +228,6 @@ class AssistantManager:
                         # Отключает бота в чате, если была эскалация
                         await update_chat(chat_id, under_assistant=False)
 
-
                         # Get the Telegram thread_id from the chat object
                         from db.chat_crud import get_chat_by_id
                         chat_object = await get_chat_by_id(chat_id)
@@ -281,8 +292,27 @@ class AssistantManager:
                             "output": json.dumps({"status": "success", "message": "Return initiated"})
                         })
 
+                    # Handle finish_communication
+                    elif function_name == "finish_communication":
+                        logger.info(f"[Assistant] Communication finished in chat {chat_id}")
+
+                        # Add the tool output
+                        tool_outputs.append({
+                            "tool_call_id": tool_call.id,
+                            "output": json.dumps({"status": "success", "message": "Communication finished"})
+                        })
+
+                        # Return special value to indicate communication is finished
+                        return "Communication finished"
+
                 # Submit the tool outputs and wait for completion
                 if tool_outputs:
+                    # Check if finish_communication was called
+                    if any(json.loads(output["output"]).get("message") == "Communication finished"
+                           for output in tool_outputs):
+                        logger.info(f"[Assistant] Finishing communication for chat {chat_id}")
+                        return "Communication finished"
+
                     run = self.client.beta.threads.runs.submit_tool_outputs_and_poll(
                         thread_id=thread_id,
                         run_id=run.id,
@@ -317,6 +347,7 @@ class AssistantManager:
         except Exception as e:
             logger.error(f"[Assistant] Error processing message: {e}")
             return None
+
 
 # Create a singleton instance
 assistant_manager = AssistantManager()

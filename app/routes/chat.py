@@ -358,6 +358,8 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
         logger.info(f"[Logic] Пропущено сообщение только из эмодзи в чате {chat_id}")
     elif response is None:
         logger.error(f'[Logic] Не получен ответ от модели в чате {chat_id}')
+    elif response == 'Communication finished':
+        logger.error(f'[Logic] Коммуникация завершена {chat_id}')
     else:
         logger.info(f"[Logic] Чат {chat_id}\n"
                     f"Ответ модели: {response}")
