@@ -129,7 +129,7 @@ async def message_collector(chat_id, message: WebhookRequest):
         current_time = datetime.now().time()
 
         # Дневной режим (10:00 - 22:00)
-        if not (time(22, 0) <= current_time or current_time <= time(10, 0)):
+        if not (time(22, 0) <= current_time or current_time <= time(12, 0)):
             # Если сообщение от менеджера - ставим метку
             if str(author_id) == str(user_id):
                 await update_chat(
