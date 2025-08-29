@@ -1,7 +1,7 @@
 import json
 import re
 
-from app.config import OPENAI_API_KEY, OPENAI_ASSISTANT_ID, prompt
+from app.config import OPENAI_API_KEY, OPENAI_ASSISTANT_ID, prompt, TELEGRAM_ESCALATION_THREAD_ID
 from app.services.logs import logger
 from openai import OpenAI
 from db.messages_crud import create_message
@@ -228,17 +228,12 @@ class AssistantManager:
                         # Отключает бота в чате, если была эскалация
                         await update_chat(chat_id, under_assistant=False)
 
-                        # Get the Telegram thread_id from the chat object
-                        from db.chat_crud import get_chat_by_id
-                        chat_object = await get_chat_by_id(chat_id)
-                        telegram_thread_id = chat_object.thread_id if chat_object else 0
-
                         # Notify via Telegram
                         from app.services.telegram_notifier import send_alert
                         await send_alert(f"❗️Требуется срочное внимание менеджера\n\n"
                                          f"Товар: {ad_url}\n"
                                          f"Причина: {reason}\n"
-                                         f"Ссылка на чат: {chat_url}", thread_id=telegram_thread_id)
+                                         f"Ссылка на чат: {chat_url}", thread_id=TELEGRAM_ESCALATION_THREAD_ID)
 
                         # Add the tool output
                         tool_outputs.append({
