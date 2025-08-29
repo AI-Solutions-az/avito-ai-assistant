@@ -7,7 +7,7 @@ from app.services.avito_api import send_message, get_ad, get_user_info
 from app.services.gpt import process_message
 from app.services.telegram_notifier import send_alert
 from app.services.logs import logger
-from app.config import Settings
+from app.config import Settings, TELEGRAM_ESCALATION_THREAD_ID
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_notifier import create_telegram_forum_topic
 from db.messages_crud import get_latest_message_by_chat_id
@@ -264,17 +264,15 @@ async def message_collector(chat_id, message: WebhookRequest):
 
             # Отправляем уведомление в Telegram
             escalation_message = (
-                f"🚨 АВТОЭСКАЛАЦИЯ - ТРЕБУЕТСЯ ОПЕРАТОР\n\n"
-                f"👤 Клиент: {user_name}\n"
-                f"💬 Сообщение: {message_text}\n"
-                f"🔍 Найдены ключевые слова: {', '.join(matched_keywords)}\n\n"
-                f"🔗 Ссылка на клиента: {user_url}\n"
-                f"📦 Объявление: {ad_url}\n"
-                f"💬 Ссылка на чат: {chat_url}"
+                f"❗️Требуется срочное внимание менеджера\n\n"
+                f"Товар: {ad_url}\n"
+                f"Причина: Найдены ключевые слова\n"
+                f"Ссылка на чат: {chat_url}\n"
+                f"🔍 Найденные ключевые слова: {', '.join(matched_keywords)}"
             )
 
             try:
-                await send_alert(escalation_message, chat_object.thread_id)
+                await send_alert(escalation_message, TELEGRAM_ESCALATION_THREAD_ID)
                 logger.info(f"[AutoEscalation] ✅ Уведомление отправлено в Telegram thread {chat_object.thread_id}")
             except Exception as telegram_error:
                 logger.error(f"[AutoEscalation] ❌ Ошибка отправки Telegram уведомления: {telegram_error}")
