@@ -7,7 +7,7 @@ from app.services.avito_api import send_message, get_ad, get_user_info
 from app.services.gpt import process_message
 from app.services.telegram_notifier import send_alert
 from app.services.logs import logger
-from app.config import Settings, TELEGRAM_ESCALATION_THREAD_ID
+from app.config import Settings, TELEGRAM_ESCALATION_THREAD_ID, ESCALATION_KEYWORDS
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_notifier import create_telegram_forum_topic
 from db.messages_crud import get_latest_message_by_chat_id
@@ -23,26 +23,6 @@ router = APIRouter()
 # Очередь сообщений и задачи ожидания
 message_queues = {}
 processing_tasks = {}
-
-# 🚨 КЛЮЧЕВЫЕ СЛОВА ДЛЯ АВТОЭСКАЛАЦИИ
-ESCALATION_KEYWORDS = [
-    'самовывоз',
-    'забрать самому',
-    'забрать самой',
-    'заберу сам',
-    'заберу сама',
-    'подъехать',
-    'подъеду',
-    'подъехал',
-    'подъехала',
-    'шоурум',
-    'шоу-рум',
-    'шоу рум',
-    'курьер',
-    'курьером',
-    'доставка курьером'
-]
-
 
 def check_escalation_keywords(message_text: str) -> tuple[bool, list[str]]:
     """
