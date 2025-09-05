@@ -61,6 +61,7 @@ size_normalizer = SizeNormalizer()
 
 # --- функции парсера ---
 async def extract_ad_id_from_url(ad_url: str):
+    logger.info(f"[Parser] Извлекаем идентификатор объявления из объявления")
     if not ad_url:
         return None
     match = re.search(r'_(\d+)$', ad_url)
@@ -73,6 +74,7 @@ async def extract_ad_id_from_url(ad_url: str):
 
 
 async def parse_ids_from_cell(cell_value):
+    logger.info("[Parser] Парсим идентификаторы объявлений из ячейки")
     if not cell_value:
         return []
     cell_value = str(cell_value).strip()
@@ -81,6 +83,7 @@ async def parse_ids_from_cell(cell_value):
 
 
 async def get_all_sheet_names():
+    logger.info(f"[Parser] Получаем список листов с гугл таблицы")
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
     async with httpx.AsyncClient() as client:
         try:
@@ -89,7 +92,7 @@ async def get_all_sheet_names():
             data = response.json()
             return [s['properties']['title'] for s in data.get('sheets', [])]
         except Exception as e:
-            logger.error(f"Ошибка при получении списка листов: {e}")
+            logger.error(f"[Parser] Ошибка при получении списка листов: {e}")
             return []
 
 
@@ -98,7 +101,7 @@ async def search_product_in_sheet(ad_id: str, sheet_name: str):
     Ищем строку с нужным ID на листе. Возвращаем весь массив rows и индекс найденной строки.
     Локальные заголовки будут определяться позже (поднимаясь вверх до ближайшей «шапки»).
     """
-    logger.info(f"Поиск товара с ID {ad_id} в листе: {sheet_name}")
+    logger.info(f"[Parser] Поиск товара с ID {ad_id} в листе: {sheet_name}")
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{sheet_name}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
     async with httpx.AsyncClient() as client:
         try:
@@ -131,6 +134,7 @@ async def search_product_in_sheet(ad_id: str, sheet_name: str):
                     break
 
             if found_row_index is None:
+                logger.info(f"[Parser] Товар с ID {ad_id} в листе {sheet_name} НЕ НАЙДЕН")
                 return None
 
             return {
@@ -139,7 +143,7 @@ async def search_product_in_sheet(ad_id: str, sheet_name: str):
                 'rows': rows
             }
         except Exception as e:
-            logger.error(f"Ошибка при поиске в листе {sheet_name}: {e}")
+            logger.error(f"[Parser] Ошибка при поиске в листе {sheet_name}: {e}")
             return None
 
 
@@ -184,6 +188,7 @@ async def parse_product_from_sheet_data(sheet_data, ad_id: str):
       3) собираем строки блока до следующей шапки/пустой строки/строки другого товара,
       4) парсим с локальными заголовками.
     """
+    logger.info("[Parser] Парсим найденный товар с листа")
     try:
         sheet_name = sheet_data['sheet_name']
         rows = sheet_data['rows']
@@ -225,7 +230,7 @@ async def parse_product_from_sheet_data(sheet_data, ad_id: str):
         return await parse_stock_with_all_info(local_headers, product_rows, ad_id, sheet_name)
 
     except Exception as e:
-        logger.error(f"Ошибка при парсинге данных из листа: {e}")
+        logger.error(f"[Parser] Ошибка при парсинге данных из листа: {e}")
         return None
 
 
@@ -350,7 +355,7 @@ async def parse_stock_with_all_info(headers, product_rows, ad_id: str, category:
         return json_result
 
     except Exception as e:
-        logger.error(f'Ошибка при парсинге строки из документа: {e}')
+        logger.error(f'[Parser] Ошибка при парсинге строки из документа: {e}')
         return None
 
 
@@ -373,6 +378,6 @@ async def get_knowledge_base():
                         result.append({'question': row[0], 'answer_example': ''})
                 return json.dumps(result, ensure_ascii=False, indent=2)
             except Exception as e:
-                logger.error(f"Ошибка при чтении листа {sheet_name}: {e}")
+                logger.error(f"[Parser] Ошибка при чтении листа {sheet_name}: {e}")
                 continue
     return None

@@ -75,7 +75,7 @@ async def get_ad(user_id: int, item_id: int) -> str:
             logger.info(f"API] Информация об объявлении получена: {ad_url}")
             return ad_url
     except httpx.RequestError as e:
-        logger.error(f"API] Ошибка при получении информации об объявлении: {e}")
+        logger.error(f"[API] Ошибка при получении информации об объявлении: {e}")
         raise
 
 async def get_user_info(user_id, chat_id):
