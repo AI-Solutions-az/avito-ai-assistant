@@ -1,4 +1,4 @@
-import httpx
+import httpx, asyncio
 import json
 import re
 from app.services.logs import logger
@@ -74,7 +74,6 @@ async def extract_ad_id_from_url(ad_url: str):
 
 
 async def parse_ids_from_cell(cell_value):
-    logger.info("[Parser] Парсим идентификаторы объявлений из ячейки")
     if not cell_value:
         return []
     cell_value = str(cell_value).strip()
@@ -85,15 +84,37 @@ async def parse_ids_from_cell(cell_value):
 async def get_all_sheet_names():
     logger.info(f"[Parser] Получаем список листов с гугл таблицы")
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url)
-            response.raise_for_status()
-            data = response.json()
-            return [s['properties']['title'] for s in data.get('sheets', [])]
-        except Exception as e:
-            logger.error(f"[Parser] Ошибка при получении списка листов: {e}")
-            return []
+
+    max_retries = 2
+    for attempt in range(max_retries):
+        async with httpx.AsyncClient() as client:
+            try:
+                if attempt > 0:
+                    logger.info(f"[Parser] Повторная попытка {attempt + 1}/{max_retries}")
+                    await asyncio.sleep(1)  # Небольшая задержка перед повтором
+
+                response = await client.get(url)
+                response.raise_for_status()
+                data = response.json()
+
+                sheet_names = [s['properties']['title'] for s in data.get('sheets', [])]
+                logger.info(f"[Parser] Успешно получен список листов: {sheet_names}")
+                return sheet_names
+
+            except Exception as e:
+                logger.error(
+                    f"[Parser] Ошибка при получении списка листов (попытка {attempt + 1}/{max_retries}): {type(e).__name__}: {str(e)}")
+                logger.error(f"[Parser] URL: {url}")
+
+                # Если это HTTP ошибка, логируем статус код и ответ
+                if hasattr(e, 'response'):
+                    logger.error(f"[Parser] Status code: {e.response.status_code}")
+                    logger.error(f"[Parser] Response text: {e.response.text}")
+
+                # Если это последняя попытка, возвращаем пустой список
+                if attempt == max_retries - 1:
+                    logger.error(f"[Parser] Исчерпаны все попытки получения списка листов")
+                    return []
 
 
 async def search_product_in_sheet(ad_id: str, sheet_name: str):
@@ -203,6 +224,7 @@ async def parse_product_from_sheet_data(sheet_data, ad_id: str):
 
         # 2) Собираем блок строк
         product_rows = []
+        logger.info("[Parser] Парсим идентификаторы объявлений из ячейки")
         found_ids = await parse_ids_from_cell(rows[found_row_index][0]) if rows[found_row_index] else []
         current_index = found_row_index
 
@@ -215,6 +237,7 @@ async def parse_product_from_sheet_data(sheet_data, ad_id: str):
                 break
 
             if current_index > found_row_index and len(row) > 0 and row[0]:
+                logger.info("[Parser] Парсим идентификаторы объявлений из ячейки")
                 current_ids = await parse_ids_from_cell(row[0])
                 if current_ids and not any(_id in found_ids for _id in current_ids):
                     break
