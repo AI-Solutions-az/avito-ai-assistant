@@ -124,11 +124,13 @@ async def search_product_in_sheet(ad_id: str, sheet_name: str):
     """
     logger.info(f"[Parser] Поиск товара с ID {ad_id} в листе: {sheet_name}")
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{sheet_name}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
+
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(url)
             response.raise_for_status()
             data = response.json()
+
             if "values" not in data or not data["values"]:
                 return None
 
@@ -163,8 +165,31 @@ async def search_product_in_sheet(ad_id: str, sheet_name: str):
                 'found_row_index': found_row_index,
                 'rows': rows
             }
+
+        except httpx.HTTPStatusError as e:
+            # Специфичная обработка HTTP ошибок
+            logger.error(f"[Parser] HTTP ошибка при поиске в листе {sheet_name}: "
+                         f"Статус {e.response.status_code}, "
+                         f"Ответ: {e.response.text}")
+            return None
+
+        except httpx.RequestError as e:
+            # Ошибки соединения, таймауты и т.д.
+            logger.error(f"[Parser] Ошибка запроса при поиске в листе {sheet_name}: "
+                         f"{type(e).__name__}: {str(e)}")
+            return None
+
+        except KeyError as e:
+            # Ошибки доступа к ключам в JSON
+            logger.error(f"[Parser] Ошибка структуры данных в листе {sheet_name}: "
+                         f"Отсутствует ключ {e}")
+            logger.error(f"[Parser] Полученные данные: {data if 'data' in locals() else 'данные недоступны'}")
+            return None
+
         except Exception as e:
-            logger.error(f"[Parser] Ошибка при поиске в листе {sheet_name}: {e}")
+            # Все остальные ошибки с полным стеком вызовов
+            logger.error(f"[Parser] Неожиданная ошибка при поиске в листе {sheet_name}: "
+                         f"{type(e).__name__}: {str(e)}")
             return None
 
 
