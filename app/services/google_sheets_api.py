@@ -117,81 +117,121 @@ async def get_all_sheet_names():
                     return []
 
 
-async def search_product_in_sheet(ad_id: str, sheet_name: str):
+async def search_product_in_sheet(ad_id: str, sheet_name: str, max_retries: int = 3, retry_delay: int = 3):
     """
     Ищем строку с нужным ID на листе. Возвращаем весь массив rows и индекс найденной строки.
     Локальные заголовки будут определяться позже (поднимаясь вверх до ближайшей «шапки»).
+
+    Args:
+        ad_id: ID товара для поиска
+        sheet_name: Название листа
+        max_retries: Максимальное количество попыток (по умолчанию 3)
+        retry_delay: Задержка между попытками в секундах (по умолчанию 3)
     """
     logger.info(f"[Parser] Поиск товара с ID {ad_id} в листе: {sheet_name}")
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{sheet_name}!{RANGE}?majorDimension=ROWS&key={API_KEY}"
 
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(url)
-            response.raise_for_status()
-            data = response.json()
+    for attempt in range(1, max_retries + 1):
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url)
+                response.raise_for_status()
+                data = response.json()
 
-            if "values" not in data or not data["values"]:
-                return None
+                if "values" not in data or not data["values"]:
+                    return None
 
-            rows = data["values"]
+                rows = data["values"]
 
-            # Находим первую «шапку» листа (не обязательно понадобится)
-            headers_row_index = None
-            for i, row in enumerate(rows):
-                if row and isinstance(row[0], str) and row[0].strip().lower() in ["id", "ид", "артикул", "код"]:
-                    headers_row_index = i
-                    break
+                # Находим первую «шапку» листа (не обязательно понадобится)
+                headers_row_index = None
+                for i, row in enumerate(rows):
+                    if row and isinstance(row[0], str) and row[0].strip().lower() in ["id", "ид", "артикул", "код"]:
+                        headers_row_index = i
+                        break
 
-            start_idx = headers_row_index + 1 if headers_row_index is not None else 0
-            found_row_index = None
+                start_idx = headers_row_index + 1 if headers_row_index is not None else 0
+                found_row_index = None
 
-            for i in range(start_idx, len(rows)):
-                row = rows[i]
-                if not row:
-                    continue
-                first_cell = row[0] if len(row) > 0 else ""
-                ids_in_cell = await parse_ids_from_cell(first_cell)
-                if ad_id in ids_in_cell:
-                    found_row_index = i
-                    break
+                for i in range(start_idx, len(rows)):
+                    row = rows[i]
+                    if not row:
+                        continue
+                    first_cell = row[0] if len(row) > 0 else ""
+                    ids_in_cell = await parse_ids_from_cell(first_cell)
+                    if ad_id in ids_in_cell:
+                        found_row_index = i
+                        break
 
-            if found_row_index is None:
-                logger.info(f"[Parser] Товар с ID {ad_id} в листе {sheet_name} НЕ НАЙДЕН")
-                return None
+                if found_row_index is None:
+                    logger.info(f"[Parser] Товар с ID {ad_id} в листе {sheet_name} НЕ НАЙДЕН")
+                    return None
 
-            return {
-                'sheet_name': sheet_name,
-                'found_row_index': found_row_index,
-                'rows': rows
-            }
+                # Успешно нашли данные - возвращаем результат
+                logger.info(f"[Parser] Товар с ID {ad_id} найден в листе {sheet_name} на строке {found_row_index}")
+                return {
+                    'sheet_name': sheet_name,
+                    'found_row_index': found_row_index,
+                    'rows': rows
+                }
 
-        except httpx.HTTPStatusError as e:
-            # Специфичная обработка HTTP ошибок
-            logger.error(f"[Parser] HTTP ошибка при поиске в листе {sheet_name}: "
-                         f"Статус {e.response.status_code}, "
-                         f"Ответ: {e.response.text}")
-            return None
+            except httpx.HTTPStatusError as e:
+                # Специфичная обработка HTTP ошибок
+                logger.error(f"[Parser] HTTP ошибка при поиске в листе {sheet_name} (попытка {attempt}/{max_retries}): "
+                             f"Статус {e.response.status_code}, "
+                             f"Ответ: {e.response.text}")
 
-        except httpx.RequestError as e:
-            # Ошибки соединения, таймауты и т.д.
-            logger.error(f"[Parser] Ошибка запроса при поиске в листе {sheet_name}: "
-                         f"{type(e).__name__}: {str(e)}")
-            return None
+                # Если это последняя попытка, возвращаем None
+                if attempt == max_retries:
+                    logger.error(f"[Parser] Исчерпаны все попытки для листа {sheet_name}")
+                    return None
 
-        except KeyError as e:
-            # Ошибки доступа к ключам в JSON
-            logger.error(f"[Parser] Ошибка структуры данных в листе {sheet_name}: "
-                         f"Отсутствует ключ {e}")
-            logger.error(f"[Parser] Полученные данные: {data if 'data' in locals() else 'данные недоступны'}")
-            return None
+                # Ждем перед следующей попыткой
+                logger.info(f"[Parser] Ожидание {retry_delay} сек перед повторной попыткой...")
+                await asyncio.sleep(retry_delay)
 
-        except Exception as e:
-            # Все остальные ошибки с полным стеком вызовов
-            logger.error(f"[Parser] Неожиданная ошибка при поиске в листе {sheet_name}: "
-                         f"{type(e).__name__}: {str(e)}")
-            return None
+            except httpx.RequestError as e:
+                # Ошибки соединения, таймауты и т.д.
+                logger.error(
+                    f"[Parser] Ошибка запроса при поиске в листе {sheet_name} (попытка {attempt}/{max_retries}): "
+                    f"{type(e).__name__}: {str(e)}")
 
+                if attempt == max_retries:
+                    logger.error(f"[Parser] Исчерпаны все попытки для листа {sheet_name}")
+                    return None
+
+                logger.info(f"[Parser] Ожидание {retry_delay} сек перед повторной попыткой...")
+                await asyncio.sleep(retry_delay)
+
+            except KeyError as e:
+                # Ошибки доступа к ключам в JSON
+                logger.error(
+                    f"[Parser] Ошибка структуры данных в листе {sheet_name} (попытка {attempt}/{max_retries}): "
+                    f"Отсутствует ключ {e}")
+                logger.error(f"[Parser] Полученные данные: {data if 'data' in locals() else 'данные недоступны'}")
+
+                if attempt == max_retries:
+                    logger.error(f"[Parser] Исчерпаны все попытки для листа {sheet_name}")
+                    return None
+
+                logger.info(f"[Parser] Ожидание {retry_delay} сек перед повторной попыткой...")
+                await asyncio.sleep(retry_delay)
+
+            except Exception as e:
+                # Все остальные ошибки с полным стеком вызовов
+                logger.error(
+                    f"[Parser] Неожиданная ошибка при поиске в листе {sheet_name} (попытка {attempt}/{max_retries}): "
+                    f"{type(e).__name__}: {str(e)}")
+
+                if attempt == max_retries:
+                    logger.error(f"[Parser] Исчерпаны все попытки для листа {sheet_name}")
+                    return None
+
+                logger.info(f"[Parser] Ожидание {retry_delay} сек перед повторной попыткой...")
+                await asyncio.sleep(retry_delay)
+
+    # Этот код не должен выполняться, но на всякий случай
+    return None
 
 async def fetch_google_sheet_stock(ad_url: str):
     ad_id = await extract_ad_id_from_url(ad_url)
