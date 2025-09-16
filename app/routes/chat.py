@@ -10,7 +10,7 @@ from app.services.logs import logger
 from app.config import Settings, TELEGRAM_ESCALATION_THREAD_ID, ESCALATION_KEYWORDS
 from db.chat_crud import get_chat_by_id, create_chat, update_chat
 from app.services.telegram_notifier import create_telegram_forum_topic
-from db.messages_crud import get_latest_message_by_chat_id
+from db.messages_crud import get_latest_message_by_chat_id_and_author_id
 
 # 🎙️ Импорты для голосовых сообщений
 from app.services.voice_recognition import voice_recognition
@@ -125,7 +125,8 @@ async def message_collector(chat_id, message: WebhookRequest):
         else:
             # Создание/обновление чата в БД (обязательно для всех сообщений)
             if user_id == author_id:
-                last_message = await get_latest_message_by_chat_id(chat_id)
+                # Получаем последнее сообщения для автора сообщения с user_id владельца аккаунта
+                last_message = await get_latest_message_by_chat_id_and_author_id(chat_id, user_id)
                 if last_message == message_text:
                     logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
                 else:
@@ -269,7 +270,7 @@ async def message_collector(chat_id, message: WebhookRequest):
 
     # Логика при отключенном WORKING_TIME_LOGIC остается прежней
     if user_id == author_id:
-        last_message = await get_latest_message_by_chat_id(chat_id)
+        last_message = await get_latest_message_by_chat_id_and_author_id(chat_id, user_id)
         if last_message == message_text:
             logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
         else:

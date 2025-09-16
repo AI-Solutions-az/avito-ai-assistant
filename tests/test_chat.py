@@ -1165,8 +1165,8 @@ async def test_case_0_6(all_mocks, monkeypatch):
         print("DEBUG: Это сообщение от менеджера")
 
         # Получаем последнее сообщение
-        from db.messages_crud import get_latest_message_by_chat_id
-        last_message = await get_latest_message_by_chat_id(chat_id)
+        from db.messages_crud import get_latest_message_by_chat_id_and_author_id
+        last_message = await get_latest_message_by_chat_id_and_author_id(chat_id, user_id)
         print(f"DEBUG: Последнее сообщение в БД: '{last_message}', новое сообщение: '{message_text}'")
 
         # Если сообщения НЕ совпадают (не webhook)

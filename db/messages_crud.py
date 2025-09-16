@@ -7,7 +7,6 @@ import datetime
 
 # Create
 async def create_message(chat_id, author_id, from_assistant=False, message=None):
-    print(f"=== create_message called! chat_id={chat_id} author_id={author_id} message={message}")
     logger.info(f"[DB] Создание сообщения в чате {chat_id}, от {author_id}")
     async with SessionLocal() as session:
         try:
@@ -28,17 +27,20 @@ async def create_message(chat_id, author_id, from_assistant=False, message=None)
             await session.rollback()
 
 # Read
-async def get_latest_message_by_chat_id(chat_id):
-    logger.info(f"[DB] Получение последнего сообщения из БД для чата {chat_id}")
+async def get_latest_message_by_chat_id_and_author_id(chat_id, author_id):
+    logger.info(f"[DB] Получение последнего сообщения из БД для чата {chat_id} и пользователя {author_id}")
     async with SessionLocal() as session:
         try:
             result = await session.execute(
                 select(Messages.message)
-                .filter(Messages.chat_id == chat_id)
+                .filter(
+                    Messages.chat_id == chat_id,
+                    Messages.author_id == str(author_id)
+                )
                 .order_by(Messages.created_at.desc())  # Сортировка по убыванию времени
             )
             latest_message = result.scalars().first()  # Получаем самое позднее сообщение
-            logger.info(f"[DB] Последнее сообщение для чата {chat_id} получено из БД. Сообщение: {latest_message}")
+            logger.info(f"[DB] Последнее сообщение для чата {chat_id} и пользователя {author_id} получено из БД. Сообщение: {latest_message}")
             return latest_message
         except SQLAlchemyError as e:
             logger.error(f"[DB] Ошибка при получении сообщения: {e} - {getattr(e, 'orig', 'Нет доп. информации')}")
