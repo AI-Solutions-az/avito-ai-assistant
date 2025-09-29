@@ -24,7 +24,7 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
         logger.info(f"Request body: {body.decode('utf-8')}")
 
         response = await call_next(request)  # Асинхронный вызов следующего обработчика
-        logger.info(f"Response: {response.status_code} {response.body.decode('utf-8')} {request.url}")
+        logger.info(f"Response: {response.status_code} {request.url}")
         return response
 
 
