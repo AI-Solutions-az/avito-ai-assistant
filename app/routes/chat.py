@@ -359,7 +359,7 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
 
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
+import traceback
 from pydantic import ValidationError
 
 
@@ -378,8 +378,13 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
         return JSONResponse(content={"ok": True}, status_code=200)
 
     except ValidationError as e:
-        logger.error(f"Validation error: {e.json()}")
+        logger.error(f"❌ Validation error:")
+        logger.error(f"Errors: {e.errors()}")
+        logger.error(f"Body: {body}")
         return JSONResponse(content={"ok": True}, status_code=200)
+
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(f"❌ Unexpected error: {type(e).__name__}: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Body: {body if 'body' in locals() else 'N/A'}")
         return JSONResponse(content={"ok": True}, status_code=200)
