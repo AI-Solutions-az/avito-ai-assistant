@@ -1,7 +1,6 @@
 import re
 from datetime import datetime, time
-from fastapi import APIRouter, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter
 from app.models.schemas import WebhookRequest
 from app.services.avito_api import send_message, get_ad, get_user_info
 from app.services.gpt import process_message
@@ -357,7 +356,7 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
 #     return JSONResponse(content={"ok": True}, status_code=200)
 
 
-from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi import Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 import traceback
 from pydantic import ValidationError
@@ -369,6 +368,7 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
     try:
         # Получаем тело запроса
         body = await request.json()
+        logger.info(f"Request body: {body}")  # Логируем тело здесь
 
         # Пытаемся валидировать
         message = WebhookRequest(**body)
@@ -380,7 +380,7 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
     except ValidationError as e:
         logger.error(f"❌ Validation error:")
         logger.error(f"Errors: {e.errors()}")
-        logger.error(f"Body: {body}")
+        logger.error(f"Body: {body if 'body' in locals() else 'N/A'}")
         return JSONResponse(content={"ok": True}, status_code=200)
 
     except Exception as e:
