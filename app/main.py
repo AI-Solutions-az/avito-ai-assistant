@@ -19,8 +19,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 class LogRequestMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        body = await request.body()  # Асинхронное получение тела запроса
         logger.info(f"New request: {request.method} {request.url}")
-        # НЕ читаем тело здесь - оно будет прочитано в обработчике
+        logger.info(f"Request body: {body.decode('utf-8')}")
 
         response = await call_next(request)  # Асинхронный вызов следующего обработчика
         logger.info(f"Response: {response.status_code} {request.url}")
