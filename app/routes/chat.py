@@ -348,12 +348,34 @@ async def process_and_send_response(combined_message, chat_id, author_id, user_i
         await send_alert(f"💁‍♂️ {user_name}: {combined_message}\n🤖 Бот: {response}\n_____\n\n",
                          thread_id=thread_id)
 
+from pydantic import ValidationError
+import traceback
+from fastapi import Request, BackgroundTasks
 
 @router.post("/chat")
-async def chat(message: WebhookRequest, background_tasks: BackgroundTasks):
+async def chat(request: Request, background_tasks: BackgroundTasks):
     """ Принимает сообщение и добавляет его в очередь обработки """
-    chat_id = message.payload.value.chat_id
-    background_tasks.add_task(message_collector, chat_id, message)
-    return JSONResponse(content={"ok": True}, status_code=200)
+    try:
+        # Получаем тело запроса
+        body = await request.json()
+        logger.info(f"Request body: {body}")  # Логируем тело здесь
 
+        # Пытаемся валидировать
+        message = WebhookRequest(**body)
+
+        chat_id = message.payload.value.chat_id
+        background_tasks.add_task(message_collector, chat_id, message)
+        return JSONResponse(content={"ok": True}, status_code=200)
+
+    except ValidationError as e:
+        logger.error(f"❌ Validation error:")
+        logger.error(f"Errors: {e.errors()}")
+        logger.error(f"Body: {body if 'body' in locals() else 'N/A'}")
+        return JSONResponse(content={"ok": True}, status_code=200)
+
+    except Exception as e:
+        logger.error(f"❌ Unexpected error: {type(e).__name__}: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Body: {body if 'body' in locals() else 'N/A'}")
+        return JSONResponse(content={"ok": True}, status_code=200)
 
