@@ -271,9 +271,6 @@ async def message_collector(chat_id, message: WebhookRequest):
     # Логика при отключенном WORKING_TIME_LOGIC остается прежней
     if user_id == author_id:
         last_message = await get_latest_message_by_chat_id_and_author_id(chat_id, user_id)
-        if last_message is None:
-            logger.info(f'Нет сообщений в чате {chat_id}')
-            return None
         if last_message == message_text:
             logger.info(f'[Logic] Хук на собственное сообщение в чате {chat_id}')
         else:
