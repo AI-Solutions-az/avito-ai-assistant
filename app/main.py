@@ -28,6 +28,30 @@ class LogRequestMiddleware(BaseHTTPMiddleware):
         return response
 
 
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from app.services.logs import logger
+
+
+# ... ваш существующий код ...
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Глобальный обработчик ошибок валидации"""
+    logger.error(f"❌ Validation error for {request.url}")
+    logger.error(f"Errors: {exc.errors()}")
+    logger.error(f"Body: {exc.body}")
+
+    return JSONResponse(
+        status_code=200,  # Возвращаем 200, чтобы Авито не слал повторно
+        content={
+            "ok": False,
+            "error": "validation_failed",
+            "details": exc.errors()
+        }
+    )
+
 # Добавление middleware в приложение
 app.add_middleware(LogRequestMiddleware)
 
